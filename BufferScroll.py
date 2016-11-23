@@ -78,6 +78,23 @@ def plugin_loaded():
         running_synch_scroll_loop = True
         thread.start_new_thread(synch_scroll_loop, ())
 
+def is_cloned_view( target_view ):
+
+    views             = sublime.active_window().views()
+    target_buffer_id  = target_view.buffer_id()
+    views_buffers_ids = []
+
+    for view in views:
+
+        views_buffers_ids.append( view.buffer_id() )
+
+    if target_buffer_id in views_buffers_ids:
+
+        views_buffers_ids.remove( target_buffer_id )
+
+    # print( "( fix_project_switch_restart_bug.py ) Is a cloned view: {0}".format( target_view.buffer_id() in views_buffers_ids ) )
+    return target_buffer_id in views_buffers_ids
+
 class Pref():
     def load(self):
         global debug
@@ -455,7 +472,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         print_debug("fold: "+str(rs));
 
                     # selection
-                    if len(db[id]['s']) > 0:
+                    if len(db[id]['s']) > 0 and not is_cloned_view( view ):
                         view.sel().clear()
                         for r in db[id]['s']:
                             view.sel().add(sublime.Region(int(r[0]), int(r[1])))
