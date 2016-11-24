@@ -23,12 +23,6 @@
 		"children":
 		[
 			{
-				"command": "buffer_scroll_forget",
-				"args": {"what": "color_scheme"},
-				"caption": "Color Scheme Forget For View"
-			},
-			{"caption":"-"},
-			{
 				"caption": "Package Settings",
 				"mnemonic": "P",
 				"id": "package-settings",
