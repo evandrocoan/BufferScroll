@@ -27,6 +27,9 @@ scroll_already_restored = {}
 last_focused_view_name = ''
 last_focused_goto_definition = False
 
+isToAllowSelectOperationOnTheClonedView = False
+
+
 def print_debug(*msg):
     if debug:
         print('BufferScroll: '+ str(msg))
@@ -78,7 +81,15 @@ def plugin_loaded():
         running_synch_scroll_loop = True
         thread.start_new_thread(synch_scroll_loop, ())
 
+
 def is_cloned_view( target_view ):
+
+    global isToAllowSelectOperationOnTheClonedView
+
+    if isToAllowSelectOperationOnTheClonedView:
+
+        isToAllowSelectOperationOnTheClonedView = False
+        return False
 
     views             = sublime.active_window().views()
     target_buffer_id  = target_view.buffer_id()
@@ -94,6 +105,22 @@ def is_cloned_view( target_view ):
 
     # print( "( fix_project_switch_restart_bug.py ) Is a cloned view: {0}".format( target_view.buffer_id() in views_buffers_ids ) )
     return target_buffer_id in views_buffers_ids
+
+
+class SampleListener(sublime_plugin.EventListener):
+    """
+        https://github.com/evandrocoan/SublimeTextStudio/issues/26#issuecomment-262328180
+    """
+
+    def on_window_command(self, window, command, args):
+
+        # print ("About to execute " + command)
+
+        if command == "clone_file":
+
+            global isToAllowSelectOperationOnTheClonedView
+            isToAllowSelectOperationOnTheClonedView = True
+
 
 class Pref():
     def load(self):
