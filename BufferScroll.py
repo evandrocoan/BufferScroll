@@ -84,13 +84,6 @@ def plugin_loaded():
 
 def is_cloned_view( target_view ):
 
-    global isToAllowSelectOperationOnTheClonedView
-
-    if isToAllowSelectOperationOnTheClonedView:
-
-        isToAllowSelectOperationOnTheClonedView = False
-        return False
-
     views             = sublime.active_window().views()
     target_buffer_id  = target_view.buffer_id()
     views_buffers_ids = []
@@ -498,12 +491,17 @@ class BufferScroll(sublime_plugin.EventListener):
                         view.fold(rs)
                         print_debug("fold: "+str(rs));
 
+                    global isToAllowSelectOperationOnTheClonedView
+
                     # selection
-                    if len(db[id]['s']) > 0 and not is_cloned_view( view ):
+                    if ( len(db[id]['s']) > 0 and not is_cloned_view( view ) ) or isToAllowSelectOperationOnTheClonedView:
                         view.sel().clear()
                         for r in db[id]['s']:
                             view.sel().add(sublime.Region(int(r[0]), int(r[1])))
                         print_debug('selection: '+str(db[id]['s']));
+
+                    if isToAllowSelectOperationOnTheClonedView:
+                        isToAllowSelectOperationOnTheClonedView = False
 
                     # marks
                     rs = []
