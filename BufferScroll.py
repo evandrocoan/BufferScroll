@@ -27,7 +27,7 @@ scroll_already_restored = {}
 last_focused_view_name = ''
 last_focused_goto_definition = False
 
-isToAllowSelectOperationOnTheClonedView = False
+g_isToAllowSelectOperationOnTheClonedView = False
 
 
 def print_debug(*msg):
@@ -111,8 +111,8 @@ class SampleListener(sublime_plugin.EventListener):
 
         if command == "clone_file":
 
-            global isToAllowSelectOperationOnTheClonedView
-            isToAllowSelectOperationOnTheClonedView = True
+            global g_isToAllowSelectOperationOnTheClonedView
+            g_isToAllowSelectOperationOnTheClonedView = True
 
 
 class Pref():
@@ -205,29 +205,35 @@ class BufferScroll(sublime_plugin.EventListener):
         # the application is not sending on_load when opening/restoring a window,
         # then there is this hack which will simulate or synthesize an on_load when you open the application
         # since this is just a hack, there is a terrible noticeable delay, which just sucks
-        self.on_load(sublime.active_window().active_view())
-        for window in sublime.windows():
-            for view in reversed(window.views()):
-                self.on_load(view)
-        for window in sublime.windows():
-            self.on_load(window.active_view())
-            self.restore_scroll(window.active_view())
+        self.on_load_async(sublime.active_window().active_view())
+
+        views   = None
+        windows = sublime.windows()
+
+        for window in windows:
+
+            views = window.views()
+
+            for view in views:
+
+                self.on_load_async( view )
+
 
     # restore on load for new opened tabs or previews.
-    def on_load(self, view):
+    def on_load_async(self, view):
         self.restore(view, 'on_load')
 
     # ST BUG tps://github.com/SublimeTextIssues/Core/issues/9
-    def on_reload(self, view):
+    def on_reload_async(self, view):
         self.restore(view, 'on_reload')
 
     # restore on load for cloned views
-    def on_clone(self, view):
+    def on_clone_async(self, view):
         # ST BUG https://github.com/SublimeTextIssues/Core/issues/8
         self.restore(sublime.active_window().active_view(), 'on_clone')
 
     # save data on focus lost
-    def on_deactivated(self, view):
+    def on_deactivated_async(self, view):
         global last_focused_view_name
         last_focused_view_name = view.name()+'-'+str(view.file_name())+'-'+str(view.settings().get('is_widget'))
 
@@ -245,21 +251,29 @@ class BufferScroll(sublime_plugin.EventListener):
             self.save(view, 'on_deactivated')
             self.synch_data(view)
 
-    # track the current_view. See next event listener
-    def on_activated(self, view):
 
-        global already_restored
-        window = view.window();
-        if not window:
-            window = sublime.active_window()
-        view = window.active_view()
+    # track the current_view. See next event listener
+    def on_activated_async(self, view):
+
+        # global already_restored
+        # window = view.window();
+
+        # if not window:
+        #     window = sublime.active_window()
+
+        # view    = window.active_view()
+        view_id = view.id()
+
         if not view.settings().get('is_widget'):
-            Pref.current_view_id = view.id()
+            Pref.current_view_id = view_id
             Pref.synch_scroll_current_view_object = view
-        if view.id() not in already_restored:
-            self.restore(view, 'on_activated')
-        if view.id() not in scroll_already_restored:
-            self.restore_scroll(view)
+
+        # if view_id not in already_restored:
+        #     self.restore( view, 'on_activated', 'on_activated_async', True)
+
+        # if view_id not in scroll_already_restored:
+        #     self.restore_scroll(view)
+
 
     # save the data when background tabs are closed
     # these that don't receive "on_deactivated"
@@ -390,7 +404,12 @@ class BufferScroll(sublime_plugin.EventListener):
         return str(window.id())+str(index)
 
     def restore_scroll(self, view, where = 'unknow'):
-        global scroll_already_restored, last_focused_view_name, last_focused_goto_definition
+
+        global last_focused_view_name
+        global scroll_already_restored
+        global last_focused_goto_definition
+        global g_isToAllowSelectOperationOnTheClonedView
+
         if view is None or not view.file_name() or view.settings().get('is_widget') or view.id() in scroll_already_restored or view not in sublime.active_window().views():
             return
 
@@ -400,7 +419,9 @@ class BufferScroll(sublime_plugin.EventListener):
             scroll_already_restored[view.id()] = True
             if last_focused_view_name == '-None-None' or last_focused_view_name == 'None' or last_focused_view_name == 'Find Results-None-None' or last_focused_goto_definition or last_focused_view_name.endswith('-True'):
                 last_focused_goto_definition = False
-            else:
+
+            # Here we cannot perform the operation to restore on the just cloned view
+            elif not g_isToAllowSelectOperationOnTheClonedView:
                 id, index = self.view_id(view)
 
                 print_line()
@@ -457,8 +478,10 @@ class BufferScroll(sublime_plugin.EventListener):
                     # print_debug('SKIPPED...')
                     pass
 
+            g_isToAllowSelectOperationOnTheClonedView = False
 
-    def restore(self, view, where = 'unknow'):
+
+    def restore( self, view, where = 'unknow', isOnActaved = False ):
         global already_restored
 
         if view is None or not view.file_name() or view.settings().get('is_widget') or view.id() in already_restored:
@@ -492,17 +515,15 @@ class BufferScroll(sublime_plugin.EventListener):
                         view.fold(rs)
                         # print_debug("fold: "+str(rs));
 
-                    global isToAllowSelectOperationOnTheClonedView
+                    global g_isToAllowSelectOperationOnTheClonedView
+                    isClonedView = is_cloned_view( view )
 
                     # selection
-                    if ( len(db[id]['s']) > 0 and not is_cloned_view( view ) ) or isToAllowSelectOperationOnTheClonedView:
+                    if ( len(db[id]['s']) > 0 and not isClonedView ) or g_isToAllowSelectOperationOnTheClonedView:
                         view.sel().clear()
                         for r in db[id]['s']:
                             view.sel().add(sublime.Region(int(r[0]), int(r[1])))
                         # print_debug('selection: '+str(db[id]['s']));
-
-                    if isToAllowSelectOperationOnTheClonedView:
-                        isToAllowSelectOperationOnTheClonedView = False
 
                     # marks
                     rs = []
@@ -538,12 +559,17 @@ class BufferScroll(sublime_plugin.EventListener):
                                 break
 
                 # scroll
-                if  Pref.get('restore_scroll', view) and Pref.get('i_use_cloned_views', view) and index in db[id]['l']:
+                if Pref.get('restore_scroll', view) and Pref.get('i_use_cloned_views', view) and index in db[id]['l']:
                     position = tuple(db[id]['l'][index])
                     view.set_viewport_position(position, Pref.use_animations)
+
                 elif Pref.get('restore_scroll', view):
                     position = tuple(db[id]['l']['0'])
                     view.set_viewport_position(position, Pref.use_animations)
+
+                # There is not need to an expensive and slow if, when just setting it to false is faster.
+                # if g_isToAllowSelectOperationOnTheClonedView:
+                g_isToAllowSelectOperationOnTheClonedView = isOnActaved or isClonedView
 
                 # print_debug('scroll set: '+str(position));
                 # print_debug('supposed current scroll: '+str(view.viewport_position())); # THIS LIES
