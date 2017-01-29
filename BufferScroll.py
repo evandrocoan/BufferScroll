@@ -157,15 +157,20 @@ class Pref():
             syntax = basename(syntax).split('.')[0].lower() if syntax != None else "plain text"
             view.settings().set('bs_sintax', syntax);
 
-        if hasattr(Pref, syntax) and type in getattr(Pref, syntax):
+        # print( "Pref: " + str( Pref )  )
+        # print( "Pref: " + syntax )
+
+        if syntax and hasattr(Pref, syntax) and type in getattr(Pref, syntax):
             return getattr(Pref, syntax)[type];
-        elif hasattr(Pref, syntax) and type not in getattr(Pref, syntax):
+        elif syntax and hasattr(Pref, syntax) and type not in getattr(Pref, syntax):
             return getattr(Pref, type)
-        elif s.has(syntax):
+        elif syntax and s.has(syntax):
             setattr(Pref, syntax, s.get(syntax))
             self.get(type, view);
         else:
             return getattr(Pref, type)
+
+
 
 class BufferScrollSaveThread(threading.Thread):
 
@@ -503,6 +508,8 @@ class BufferScroll(sublime_plugin.EventListener):
 
             if id in db:
                 # print_debug('DOING...')
+
+                isClonedView = False
 
                 # if the view changed outside of the application, don't restore folds etc
                 if db[id]['id'] == int(view.size()):
