@@ -415,15 +415,33 @@ class BufferScroll(sublime_plugin.EventListener):
         global last_focused_goto_definition
         global g_isToAllowSelectOperationOnTheClonedView
 
-        if view is None or not view.file_name() or view.settings().get('is_widget') or view.id() in scroll_already_restored or view not in sublime.active_window().views():
+        print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+
+        if last_focused_goto_definition:
+
+            return
+
+        if view is None \
+                or not view.file_name() \
+                or view.settings().get('is_widget') \
+                or view.id() in scroll_already_restored \
+                or view not in sublime.active_window().views():
+
             return
 
         if view.is_loading():
             sublime.set_timeout(lambda: self.restore_scroll(view, where), 100)
         else:
             scroll_already_restored[view.id()] = True
-            if last_focused_view_name == '-None-None' or last_focused_view_name == 'None' or last_focused_view_name == 'Find Results-None-None' or last_focused_goto_definition or last_focused_view_name.endswith('-True'):
-                last_focused_goto_definition = False
+
+            if last_focused_view_name == '-None-None' \
+                    or last_focused_view_name == 'None' \
+                    or last_focused_view_name == 'Find Results-None-None' \
+                    or last_focused_goto_definition \
+                    or last_focused_view_name.endswith('-True'):
+
+                pass
+                # last_focused_goto_definition = False
 
             # Here we cannot perform the operation to restore on the just cloned view
             elif not g_isToAllowSelectOperationOnTheClonedView:
@@ -487,9 +505,21 @@ class BufferScroll(sublime_plugin.EventListener):
 
 
     def restore( self, view, where = 'unknow', isOnActaved = False ):
-        global already_restored
 
-        if view is None or not view.file_name() or view.settings().get('is_widget') or view.id() in already_restored:
+        global already_restored
+        global last_focused_goto_definition
+
+        print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+
+        if last_focused_goto_definition:
+
+            return
+
+        if view is None \
+                or not view.file_name() \
+                or view.settings().get('is_widget') \
+                or view.id() in already_restored:
+
             return
 
         if view.is_loading():
@@ -827,6 +857,8 @@ def synch_scroll_loop():
             sublime.set_timeout(lambda:synch_scroll(), 0)
         time.sleep(0.08)
 
+
+
 def synch_data_loop():
     synch_data = BufferScrollAPI.synch_data
     while True:
@@ -834,23 +866,47 @@ def synch_data_loop():
             sublime.set_timeout(lambda:synch_data(None, 'thread'), 0)
         time.sleep(0.5)
 
+
+
+def unlockTheScrollRestoring():
+
+    global last_focused_goto_definition
+    last_focused_goto_definition = False
+
+
+
 class BufferScrollListener(sublime_plugin.EventListener):
 
     def on_text_command(self, view, command_name, args):
-        global last_focused_view_name, last_focused_goto_definition
+
+        global last_focused_view_name
+        global last_focused_goto_definition
+
         if command_name == 'goto_definition' or command_name == 'navigate_to_definition':
+
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
+
+            sublime.set_timeout( unlockTheScrollRestoring, 10000 )
 
     def on_window_command(self, window, command_name, args):
-        global last_focused_view_name, last_focused_goto_definition
+
+        global last_focused_view_name
+        global last_focused_goto_definition
+
         if command_name == 'goto_definition' or command_name == 'navigate_to_definition':
+
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
 
+            sublime.set_timeout( unlockTheScrollRestoring, 10000 )
+
     def on_post_text_command(self, view, command_name, args):
+
         # typewriter_scrolling
-        if (command_name == 'move' or  command_name == 'move_to') and Pref.get('typewriter_scrolling_follow_cursor_movement', view):
+        if (command_name == 'move' or  command_name == 'move_to') \
+                and Pref.get('typewriter_scrolling_follow_cursor_movement', view):
+
             BufferScrollAPI.on_modified(view)
 
     # def on_post_window_command(self, window, command_name, args):
