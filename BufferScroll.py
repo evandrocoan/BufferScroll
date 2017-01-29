@@ -415,7 +415,7 @@ class BufferScroll(sublime_plugin.EventListener):
         global last_focused_goto_definition
         global g_isToAllowSelectOperationOnTheClonedView
 
-        print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
 
         if last_focused_goto_definition:
 
@@ -509,7 +509,7 @@ class BufferScroll(sublime_plugin.EventListener):
         global already_restored
         global last_focused_goto_definition
 
-        print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
 
         if last_focused_goto_definition:
 
