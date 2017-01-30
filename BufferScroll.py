@@ -877,12 +877,42 @@ def unlockTheScrollRestoring():
 
 class BufferScrollListener(sublime_plugin.EventListener):
 
+    definition_view = None
+    pre_definition_view = None
+
+    def on_activated(self, view):
+        """
+            It is possible to click outside the goto definition input box and the quick panel
+            stays visible, so this won't work in that case, and on_close isn't fired when the
+            quick panel really is closed. If you just care about when the user is typing in this
+            view, it should be enough to ignore the quick panel view in your plugin because the
+            id doesn't seem to get reused. But, I'm not sure how to tell when it has been closed,
+            without making changes to Packages/Default/symbols.py which I wouldn't recommend
+
+            https://forum.sublimetext.com/t/how-to-detect-when-the-user-closed-the-goto-definition-box/25800
+        """
+        if self.pre_definition_view is not None:
+
+            # print('this view is the goto_definition input view', view.id(), 'activated from view', self.pre_definition_view)
+            self.definition_view = view.id()
+            self.pre_definition_view = None
+
+        elif self.definition_view is not None and self.definition_view != view.id():
+
+            # print('the goto_definition input view was just deactivated')
+            self.definition_view = None
+
+            global last_focused_goto_definition
+            last_focused_goto_definition = False
+
     def on_text_command(self, view, command_name, args):
 
         global last_focused_view_name
         global last_focused_goto_definition
 
-        if command_name == 'goto_definition' or command_name == 'navigate_to_definition':
+        if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
+
+            self.pre_definition_view = window.active_view().id()
 
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
@@ -894,7 +924,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
         global last_focused_view_name
         global last_focused_goto_definition
 
-        if command_name == 'goto_definition' or command_name == 'navigate_to_definition':
+        if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
 
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
