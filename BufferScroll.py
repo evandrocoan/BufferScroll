@@ -64,10 +64,9 @@ def plugin_loaded():
     Pref = Pref()
     Pref.load()
     s.clear_on_change('reload')
-    s.add_on_change('reload',   lambda:Pref.load())
+    s.add_on_change('reload', lambda:Pref.load())
 
     BufferScrollAPI = BufferScroll()
-
     BufferScrollAPI.init_()
 
     # threads listening scroll, and waiting to set data on focus change
@@ -206,22 +205,32 @@ class BufferScrollSaveThread(threading.Thread):
 class BufferScroll(sublime_plugin.EventListener):
 
     def init_(self):
-        # ST BUG https://github.com/SublimeTextIssues/Core/issues/5
-        # the application is not sending on_load when opening/restoring a window,
-        # then there is this hack which will simulate or synthesize an on_load when you open the application
-        # since this is just a hack, there is a terrible noticeable delay, which just sucks
-        self.on_load_async(sublime.active_window().active_view())
+        """
+            ST BUG https://github.com/SublimeTextIssues/Core/issues/5
+            the application is not sending on_load when opening/restoring a window,
+            then there is this hack which will simulate or synthesize an on_load when you open the application
+            since this is just a hack, there is a terrible noticeable delay, which just sucks.
 
-        views   = None
-        windows = sublime.windows()
+            Update 2017: This is not a bug and it is how it is supposed to happen!
+            https://github.com/SublimeTextIssues/Core/issues/1508
 
-        for window in windows:
+            What this does actually is create bugs when there are cloned view opened. Sublime Text
+            already restore the scroll's and cursor's of the views when opening a new window or when
+            first starting.
+        """
+        pass
+        # self.on_load_async(sublime.active_window().active_view())
 
-            views = window.views()
+        # views   = None
+        # windows = sublime.windows()
 
-            for view in views:
+        # for window in windows:
 
-                self.on_load_async( view )
+        #     views = window.views()
+
+        #     for view in views:
+
+        #         self.on_load_async( view )
 
 
     # restore on load for new opened tabs or previews.
