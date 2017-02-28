@@ -942,10 +942,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
             last_focused_goto_definition = False
 
     def is_find_results_view( self, view ):
-        syntax = view.settings().get('syntax', '')
-
-        if syntax:
-            return syntax.endswith("Find Results.hidden-tmLanguage")
+        return view.name() == ("Find Results")
 
     def on_text_command(self, view, command_name, args):
 
