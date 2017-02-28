@@ -886,10 +886,33 @@ def unlockTheScrollRestoring():
 
 class BufferScrollListener(sublime_plugin.EventListener):
 
-    definition_view = None
+    definition_view     = None
     pre_definition_view = None
 
-    def on_activated(self, view):
+    isFindResultsView   = False
+
+    def on_deactivated( self, view ):
+        """
+            The forwards on_deactivated(2) and on_deactivated_async(2) are used to allow the silent
+            go to inside a `Find Results` view. It keep us from restoring the last scroll on the opened
+            file, overriding the line we are jumping from the `Find Results` to a search result file.
+
+            This works because the on_deactivated_async(2) is called a little latter than  on_deactivated(2).
+            Therefore when we are leaving the `Find Results` view, we may correctly set the state for
+            `last_focused_goto_definition` enabling and disabling it respectively.
+        """
+
+        if self.isFindResultsView:
+            global last_focused_goto_definition
+            last_focused_goto_definition = True
+
+    def on_deactivated_async( self, view ):
+        global last_focused_goto_definition
+
+        self.isFindResultsView       = False
+        last_focused_goto_definition = False
+
+    def on_activated_async(self, view):
         """
             It is possible to click outside the goto definition input box and the quick panel
             stays visible, so this won't work in that case, and on_close isn't fired when the
@@ -900,6 +923,10 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
             https://forum.sublimetext.com/t/how-to-detect-when-the-user-closed-the-goto-definition-box/25800
         """
+
+        if self.is_find_results_view( view ):
+            self.isFindResultsView = True
+
         if self.pre_definition_view is not None:
 
             # print('this view is the goto_definition input view', view.id(), 'activated from view', self.pre_definition_view)
@@ -913,6 +940,12 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
             global last_focused_goto_definition
             last_focused_goto_definition = False
+
+    def is_find_results_view( self, view ):
+        syntax = view.settings().get('syntax', '')
+
+        if syntax:
+            return syntax.endswith("Find Results.hidden-tmLanguage")
 
     def on_text_command(self, view, command_name, args):
 
