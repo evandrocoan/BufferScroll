@@ -951,7 +951,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
         if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
 
-            self.pre_definition_view = window.active_view().id()
+            self.pre_definition_view = view.window().active_view().id()
 
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
