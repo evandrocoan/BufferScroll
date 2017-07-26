@@ -301,11 +301,28 @@ class BufferScroll(sublime_plugin.EventListener):
 
     # typewriter scrolling
     def on_modified(self, view):
-        if not view.settings().get('is_widget') and not view.is_scratch() and len(view.sel()) == 1 and Pref.get('typewriter_scrolling', view):
-            # TODO STBUG if the view is in a column, for some reason the parameter view, is not correct. This fix it
+        """
+        There is a error which could pop some times directly to this line.
+
+        Traceback (most recent call last):
+          File "D:\SublimeText\sublime_plugin.py", line 389, in run_callback
+            expr()
+          File "D:\SublimeText\sublime_plugin.py", line 488, in <lambda>
+            run_callback('on_modified', callback, lambda: callback.on_modified(v))
+          File "D:\SublimeText\Data\Packages\BufferScroll\BufferScroll.py", line 304, in on_modified
+            if not view.settings().get('is_widget') and not view.is_scratch() and len(view.sel()) == 1 and Pref.get('typewriter_scrolling', view):
+        TypeError: get() missing 1 required positional argument: 'view'
+        """
+        # TODO STBUG if the view is in a column, for some reason the parameter view, is not correct. This fix it
+        if not view.settings().get('is_widget') \
+                and not view.is_scratch() \
+                and len(view.sel()) == 1 \
+                and Pref.get('typewriter_scrolling', view):
             window = view.window();
+
             if not window:
                 window = sublime.active_window()
+
             view = window.active_view()
 
             print_line()
