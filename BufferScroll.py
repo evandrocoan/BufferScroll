@@ -312,6 +312,8 @@ class BufferScroll(sublime_plugin.EventListener):
           File "D:\SublimeText\Data\Packages\BufferScroll\BufferScroll.py", line 304, in on_modified
             if not view.settings().get('is_widget') and not view.is_scratch() and len(view.sel()) == 1 and Pref.get('typewriter_scrolling', view):
         TypeError: get() missing 1 required positional argument: 'view'
+
+        Issue: https://github.com/evandrocoan/SublimeTextStudio/issues/49
         """
         # TODO STBUG if the view is in a column, for some reason the parameter view, is not correct. This fix it
         if not view.settings().get('is_widget') \
