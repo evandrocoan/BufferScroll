@@ -286,7 +286,7 @@ class BufferScroll(sublime_plugin.EventListener):
         #     self.restore( view, 'on_activated', 'on_activated_async', True)
 
         # if view_id not in scroll_already_restored:
-        #     self.restore_scroll(view)
+        #     self.restore_scrolling(view)
 
 
     # save the data when background tabs are closed
@@ -436,7 +436,7 @@ class BufferScroll(sublime_plugin.EventListener):
         index = window.get_view_index(view)
         return str(window.id())+str(index)
 
-    def restore_scroll(self, view, where = 'unknow'):
+    def restore_scrolling(self, view, where = 'unknow'):
 
         global last_focused_view_name
         global scroll_already_restored
@@ -458,7 +458,7 @@ class BufferScroll(sublime_plugin.EventListener):
             return
 
         if view.is_loading():
-            sublime.set_timeout(lambda: self.restore_scroll(view, where), 100)
+            sublime.set_timeout(lambda: self.restore_scrolling(view, where), 100)
         else:
             scroll_already_restored[view.id()] = True
 
@@ -476,7 +476,7 @@ class BufferScroll(sublime_plugin.EventListener):
                 id, index = self.view_id(view)
 
                 print_line()
-                # print_debug ('RESTORE_SCROLL()')
+                # print_debug ('RESTORE_SCROLLING()')
                 # print_debug ('from: '+where)
                 # print_debug ('last_focused_view_name: '+last_focused_view_name)
                 # print_debug ('file: '+view.file_name())
