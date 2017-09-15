@@ -12,8 +12,42 @@ try:
 except:
     from pickle import load, dump
 
+import os
+import sys
 import time
 from os.path import basename
+
+def assert_path(module):
+    """
+        Import a module from a relative path
+        https://stackoverflow.com/questions/279237/import-a-module-from-a-relative-path
+    """
+    if module not in sys.path:
+        sys.path.append( module )
+
+# Import the debug tools
+assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools' ) )
+
+# Import the debugger
+try:
+    import debug_tools
+    from debug_tools import log
+
+    # Enable debug messages: (bitwise)
+    #
+    # 0   - Disabled debugging.
+    # 1   - Basic logging messages.
+    # 2   - Original levels from tito
+    #
+    # 127 - All debugging levels at the same time.
+    debug_tools.g_debug_level = 0
+
+    log( 1, "Debugging" )
+    log( 1, "..." )
+    log( 1, "..." )
+
+except:
+    pass
 
 # import inspect
 debug = {}
@@ -28,15 +62,6 @@ last_focused_view_name = ''
 last_focused_goto_definition = False
 
 g_isToAllowSelectOperationOnTheClonedView = False
-
-
-def print_debug(*msg):
-    if debug:
-        print('BufferScroll: '+ str(msg))
-
-def print_line():
-    if debug:
-        print('-'*100)
 
 def plugin_loaded():
 
@@ -95,7 +120,7 @@ def is_cloned_view( target_view ):
 
         views_buffers_ids.remove( target_buffer_id )
 
-    # print( "( fix_project_switch_restart_bug.py ) Is a cloned view: {0}".format( target_view.buffer_id() in views_buffers_ids ) )
+    # log( 1, "( fix_project_switch_restart_bug.py ) Is a cloned view: {0}".format( target_view.buffer_id() in views_buffers_ids ) )
     return target_buffer_id in views_buffers_ids
 
 
@@ -106,7 +131,7 @@ class SampleListener(sublime_plugin.EventListener):
 
     def on_window_command(self, window, command, args):
 
-        # print ("About to execute " + command)
+        # log( 1, "About to execute " + command )
 
         if command == "clone_file":
 
@@ -156,8 +181,8 @@ class Pref():
             syntax = basename(syntax).split('.')[0].lower() if syntax != None else "plain text"
             view.settings().set('bs_sintax', syntax);
 
-        # print( "Pref: " + str( Pref )  )
-        # print( "Pref: " + syntax )
+        # log( 1, "Pref: " + str( Pref ) )
+        # log( 1, "Pref: " + syntax )
 
         if syntax and hasattr(Pref, syntax) and type in getattr(Pref, syntax):
             return getattr(Pref, syntax)[type];
@@ -180,8 +205,8 @@ class BufferScrollSaveThread(threading.Thread):
         if not Pref.writing_to_disk:
             Pref.writing_to_disk = True
 
-            print_line()
-            # print_debug('WRITING TO DISK')
+            # log( 2, "" )
+            # log( 2, 'WRITING TO DISK' )
             start = time.time()
 
             while len(db) > Pref.max_database_records:
@@ -199,7 +224,7 @@ class BufferScrollSaveThread(threading.Thread):
             except:
                 pass
 
-            # print_debug('time expend writting to disk', time.time()-start)
+            # log( 2, 'time expend writting to disk', time.time()-start )
             Pref.writing_to_disk = False
 
 class BufferScroll(sublime_plugin.EventListener):
@@ -327,8 +352,8 @@ class BufferScroll(sublime_plugin.EventListener):
 
             view = window.active_view()
 
-            print_line()
-            # print_debug('TYPEWRITER_SCROLLING')
+            # log( 2, "" )
+            # log( 2, 'TYPEWRITER_SCROLLING' )
             line, col = view.rowcol(view.sel()[0].b)
             line = line-Pref.typewriter_scrolling_shift
             if line < 1:
@@ -350,12 +375,12 @@ class BufferScroll(sublime_plugin.EventListener):
 
             id, index = self.view_id(view)
 
-            print_line()
-            # print_debug ('SAVE() ')
-            # print_debug ('from: '+where)
-            # print_debug ('file: '+view.file_name())
-            # print_debug ('id: '+id)
-            # print_debug ('position: '+index)
+            # log( 2, "" )
+            # log( 2, 'SAVE() ' )
+            # log( 2, 'from: '+where )
+            # log( 2, 'file: '+view.file_name() )
+            # log( 2, 'id: '+id )
+            # log( 2, 'position: '+index )
 
             # creates an object for this view, if it is unknow to the package
             if id not in db:
@@ -378,19 +403,19 @@ class BufferScroll(sublime_plugin.EventListener):
             # also save as default if no exists
             if index != '0':
                 db[id]['l']['0'] = list(view.viewport_position())
-            # print_debug('viewport_position: '+str(db[id]['l']['0']))
+            # log( 2, 'viewport_position: '+str(db[id]['l']['0']) )
 
             # selections
             db[id]['s'] = [[item.a, item.b] for item in view.sel()]
-            # print_debug('selections: '+str(db[id]['s']))
+            # log( 2, 'selections: '+str(db[id]['s']) )
 
             # marks
             db[id]['m'] = [[item.a, item.b] for item in view.get_regions("mark")]
-            # print_debug('marks: '+str(db[id]['m']))
+            # log( 2, 'marks: '+str(db[id]['m']) )
 
             # bookmarks
             db[id]['b'] = [[item.a, item.b] for item in view.get_regions("bookmarks")]
-            # print_debug('bookmarks: '+str(db[id]['b']))
+            # log( 2, 'bookmarks: '+str(db[id]['b']) )
 
             # previous folding save, to be able to refold
             if 'f' in db[id] and list(db[id]['f']) != []:
@@ -398,17 +423,17 @@ class BufferScroll(sublime_plugin.EventListener):
 
             # folding
             db[id]['f'] = [[item.a, item.b] for item in view.folded_regions()]
-            # print_debug('fold: '+str(db[id]['f']))
+            # log( 2, 'fold: '+str(db[id]['f']) )
 
             # color_scheme http://www.sublimetext.com/forum/viewtopic.php?p=25624#p25624
             if Pref.get('remember_color_scheme', view):
                 db[id]['c'] = view.settings().get('color_scheme')
-                # print_debug('color_scheme: '+str(db[id]['c']))
+                # log( 2, 'color_scheme: '+str(db[id]['c']) )
 
             # syntax
             if Pref.get('remember_syntax', view):
                 db[id]['x'] = view.settings().get('syntax')
-                # print_debug('syntax: '+str(db[id]['x']))
+                # log( 2, 'syntax: '+str(db[id]['x']) )
 
             # settings list
             settings = Pref.get('remember_settings_list', view)
@@ -443,7 +468,7 @@ class BufferScroll(sublime_plugin.EventListener):
         global last_focused_goto_definition
         global g_isToAllowSelectOperationOnTheClonedView
 
-        # print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # log( 1, "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
 
         if last_focused_goto_definition:
 
@@ -475,16 +500,16 @@ class BufferScroll(sublime_plugin.EventListener):
             elif not g_isToAllowSelectOperationOnTheClonedView:
                 id, index = self.view_id(view)
 
-                print_line()
-                # print_debug ('RESTORE_SCROLLING()')
-                # print_debug ('from: '+where)
-                # print_debug ('last_focused_view_name: '+last_focused_view_name)
-                # print_debug ('file: '+view.file_name())
-                # print_debug ('id: '+id)
-                # print_debug ('position: '+index)
+                # log( 2, "" )
+                # log( 2, 'RESTORE_SCROLLING()' )
+                # log( 2, 'from: '+where )
+                # log( 2, 'last_focused_view_name: '+last_focused_view_name )
+                # log( 2, 'file: '+view.file_name() )
+                # log( 2, 'id: '+id )
+                # log( 2, 'position: '+index )
 
                 if id in db and Pref.get('restore_scroll', view):
-                    # print_debug('DOING...')
+                    # log( 2, 'DOING...' )
                     # scroll
                     if Pref.get('i_use_cloned_views', view) and index in db[id]['l']:
                         position = tuple(db[id]['l'][index])
@@ -523,10 +548,10 @@ class BufferScroll(sublime_plugin.EventListener):
                     # ugly hack
                     sublime.set_timeout(lambda: self.stupid_scroll(view, position), 50)
 
-                    # print_debug('scroll set: '+str(position));
-                    # print_debug('supposed current scroll: '+str(view.viewport_position())); # THIS LIES
+                    # log( 2, 'scroll set: '+str(position)) ;
+                    # log( 2, 'supposed current scroll: '+str(view.viewport_position())); # THIS LIE S
                 else:
-                    # print_debug('SKIPPED...')
+                    # log( 2, 'SKIPPED...' )
                     pass
 
             g_isToAllowSelectOperationOnTheClonedView = False
@@ -537,7 +562,7 @@ class BufferScroll(sublime_plugin.EventListener):
         global already_restored
         global last_focused_goto_definition
 
-        # print( "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # log( 1, "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
 
         if last_focused_goto_definition:
 
@@ -557,16 +582,16 @@ class BufferScroll(sublime_plugin.EventListener):
             already_restored[view.id()] = True
             id, index = self.view_id(view)
 
-            print_line()
-            # print_debug ('RESTORE()')
-            # print_debug ('from: '+where)
-            # print_debug ('last_focused_view_name: '+last_focused_view_name)
-            # print_debug ('file: '+view.file_name())
-            # print_debug ('id: '+id)
-            # print_debug ('position: '+index)
+            # log( 2, "" )
+            # log( 2, 'RESTORE()' )
+            # log( 2, 'from: '+where )
+            # log( 2, 'last_focused_view_name: '+last_focused_view_name )
+            # log( 2, 'file: '+view.file_name() )
+            # log( 2, 'id: '+id )
+            # log( 2, 'position: '+index )
 
             if id in db:
-                # print_debug('DOING...')
+                # log( 2, 'DOING...' )
 
                 isClonedView = False
 
@@ -579,7 +604,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.fold(rs)
-                        # print_debug("fold: "+str(rs));
+                        # log( 2, "fold: "+str(rs)) ;
 
                     global g_isToAllowSelectOperationOnTheClonedView
                     isClonedView = is_cloned_view( view )
@@ -589,7 +614,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         view.sel().clear()
                         for r in db[id]['s']:
                             view.sel().add(sublime.Region(int(r[0]), int(r[1])))
-                        # print_debug('selection: '+str(db[id]['s']));
+                        # log( 2, 'selection: '+str(db[id]['s'])) ;
 
                     # marks
                     rs = []
@@ -597,7 +622,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.add_regions("mark", rs, "mark", "dot", sublime.HIDDEN | sublime.PERSISTENT)
-                        # print_debug('marks: '+str(db[id]['m']));
+                        # log( 2, 'marks: '+str(db[id]['m'])) ;
 
                     # bookmarks
                     rs = []
@@ -605,17 +630,17 @@ class BufferScroll(sublime_plugin.EventListener):
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.add_regions("bookmarks", rs, "bookmarks", "bookmark", sublime.HIDDEN | sublime.PERSISTENT)
-                        # print_debug('bookmarks: '+str(db[id]['b']));
+                        # log( 2, 'bookmarks: '+str(db[id]['b'])) ;
 
                 # color scheme
                 if Pref.get('remember_color_scheme', view) and 'c' in db[id] and view.settings().get('color_scheme') != db[id]['c']:
                     view.settings().set('color_scheme', db[id]['c'])
-                    # print_debug('color scheme: '+str(db[id]['c']));
+                    # log( 2, 'color scheme: '+str(db[id]['c'])) ;
 
                 # syntax
                 if Pref.get('remember_syntax', view) and 'x' in db[id] and view.settings().get('syntax') != db[id]['x'] and lexists(dirname(sublime.packages_path())+'/'+db[id]['x']):
                     view.settings().set('syntax', db[id]['x'])
-                    # print_debug('syntax: '+str(db[id]['x']));
+                    # log( 2, 'syntax: '+str(db[id]['x'])) ;
 
                 if 'p' in db[id]:
                     for item in Pref.get('remember_settings_list', view):
@@ -637,18 +662,18 @@ class BufferScroll(sublime_plugin.EventListener):
                 # if g_isToAllowSelectOperationOnTheClonedView:
                 g_isToAllowSelectOperationOnTheClonedView = isOnActaved or isClonedView
 
-                # print_debug('scroll set: '+str(position));
-                # print_debug('supposed current scroll: '+str(view.viewport_position())); # THIS LIES
+                # log( 2, 'scroll set: '+str(position)) ;
+                # log( 2, 'supposed current scroll: '+str(view.viewport_position())); # THIS LIE S
             else:
-                # print_debug('SKIPPED...')
+                # log( 2, 'SKIPPED...' )
                 pass
 
     def stupid_scroll(self, view, position):
         view.set_viewport_position(position, Pref.use_animations)
 
     # def print_stupid_scroll(self, view):
-        # print_debug('current scroll for: '+str(view.file_name()));
-        # print_debug('current scroll: '+str(view.viewport_position()));
+        # log( 2, 'current scroll for: '+str(view.file_name())) ;
+        # log( 2, 'current scroll: '+str(view.viewport_position())) ;
 
     def synch_data(self, view = None, where = 'unknow'):
         if view is None:
@@ -680,8 +705,8 @@ class BufferScroll(sublime_plugin.EventListener):
                 Pref.synch_data_running = False
                 return
 
-            print_line()
-            # print_debug('SYNCH_DATA()')
+            # log( 2, "" )
+            # log( 2, 'SYNCH_DATA()' )
 
             id, index = self.view_id(view)
 
@@ -707,10 +732,10 @@ class BufferScroll(sublime_plugin.EventListener):
                     if bookmarks:
                         if bookmarks != _view.get_regions('bookmarks'):
                             _view.erase_regions("bookmarks")
-                            # print_debug ('synching bookmarks')
+                            # log( 2, 'synching bookmarks' )
                             _view.add_regions("bookmarks", bookmarks, "bookmarks", "bookmark", sublime.HIDDEN | sublime.PERSISTENT)
                         else:
-                            # print_debug ('skipping synch of bookmarks these are equal')
+                            # log( 2, 'skipping synch of bookmarks these are equal' )
                             pass
                     else:
                         _view.erase_regions("bookmarks")
@@ -720,10 +745,10 @@ class BufferScroll(sublime_plugin.EventListener):
                     if marks:
                         if marks != _view.get_regions('mark'):
                             _view.erase_regions("mark")
-                            # print_debug ('synching marks')
+                            # log( 2, 'synching marks' )
                             _view.add_regions("mark", marks, "mark", "dot", sublime.HIDDEN | sublime.PERSISTENT)
                         else:
-                            # print_debug ('skipping synch of marks these are equal')
+                            # log( 2, 'skipping synch of marks these are equal' )
                             pass
                     else:
                         _view.erase_regions("mark")
@@ -732,11 +757,11 @@ class BufferScroll(sublime_plugin.EventListener):
                 if Pref.get('synch_folds', _view):
                     if folds:
                         if folds != _view.folded_regions():
-                            # print_debug ('synching folds')
+                            # log( 2, 'synching folds' )
                             _view.unfold(sublime.Region(0, _view.size()))
                             _view.fold(folds)
                         else:
-                            # print_debug ('skipping synch of folds these are equal')
+                            # log( 2, 'skipping synch of folds these are equal' )
                             pass
                     else:
                         _view.unfold(sublime.Region(0, _view.size()))
@@ -776,8 +801,8 @@ class BufferScroll(sublime_plugin.EventListener):
             Pref.synch_scroll_running = False
             return
 
-        print_line()
-        # print_debug('SYNCH_SCROLL()')
+        # log( 2, "" )
+        # log( 2, 'SYNCH_SCROLL()' )
 
         # current view
         id, index = self.view_id(view)
@@ -898,7 +923,7 @@ def synch_data_loop():
 
 
 def unlockTheScrollRestoring():
-    # print('On unlockTheScrollRestoring')
+    # log( 1,'On unlockTheScrollRestoring' )
 
     global last_focused_goto_definition
     last_focused_goto_definition = False
@@ -933,7 +958,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
             so we only can disable the `last_focused_goto_definition` when we know we are on the
             `self.isFindResultsView` hook call.
         """
-        # print('On self.isFindResultsView on_deactivated_async')
+        # log( 1,'On self.isFindResultsView on_deactivated_async' )
 
         if self.isFindResultsView:
             global last_focused_goto_definition
@@ -958,13 +983,13 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
         if self.pre_definition_view is not None:
 
-            # print('Calling goto_definition from view.id:', view.id(), ', to the view.id:', self.pre_definition_view)
+            # log( 1,'Calling goto_definition from view.id:', view.id(), ', to the view.id:', self.pre_definition_view )
             self.definition_view = view.id()
             self.pre_definition_view = None
 
         elif self.definition_view is not None and self.definition_view != view.id():
 
-            # print('The goto_definition input view was just deactivated')
+            # log( 1,'The goto_definition input view was just deactivated' )
             self.definition_view = None
 
             global last_focused_goto_definition
@@ -986,7 +1011,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
         if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
 
-            # print('On hook_sublime_text_command')
+            # log( 1,'On hook_sublime_text_command' )
             self.pre_definition_view = window.active_view().id()
 
             last_focused_view_name = 'None'
