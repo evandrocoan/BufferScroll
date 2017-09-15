@@ -552,6 +552,7 @@ class BufferScroll(sublime_plugin.EventListener):
 
         if view.is_loading():
             sublime.set_timeout(lambda: self.restore(view, where), 100)
+
         else:
             already_restored[view.id()] = True
             id, index = self.view_id(view)
@@ -897,6 +898,7 @@ def synch_data_loop():
 
 
 def unlockTheScrollRestoring():
+    # print('On unlockTheScrollRestoring')
 
     global last_focused_goto_definition
     last_focused_goto_definition = False
@@ -916,7 +918,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
             go to inside a `Find Results` view. It keep us from restoring the last scroll on the opened
             file, overriding the line we are jumping from the `Find Results` to a search result file.
 
-            This works because the on_deactivated_async(2) is called a little latter than  on_deactivated(2).
+            This works because the on_deactivated_async(2) is called a little latter than on_deactivated(2).
             Therefore when we are leaving the `Find Results` view, we may correctly set the state for
             `last_focused_goto_definition` enabling and disabling it respectively.
         """
@@ -926,10 +928,18 @@ class BufferScrollListener(sublime_plugin.EventListener):
             last_focused_goto_definition = True
 
     def on_deactivated_async( self, view ):
-        global last_focused_goto_definition
+        """
+            On the lasted Sublime Text version 3144, `on_deactivated_async` is being called too fast
+            so we only can disable the `last_focused_goto_definition` when we know we are on the
+            `self.isFindResultsView` hook call.
+        """
+        # print('On self.isFindResultsView on_deactivated_async')
 
-        self.isFindResultsView       = False
-        last_focused_goto_definition = False
+        if self.isFindResultsView:
+            global last_focused_goto_definition
+
+            self.isFindResultsView       = False
+            last_focused_goto_definition = False
 
     def on_activated_async(self, view):
         """
@@ -948,13 +958,13 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
         if self.pre_definition_view is not None:
 
-            # print('this view is the goto_definition input view', view.id(), 'activated from view', self.pre_definition_view)
+            # print('Calling goto_definition from view.id:', view.id(), ', to the view.id:', self.pre_definition_view)
             self.definition_view = view.id()
             self.pre_definition_view = None
 
         elif self.definition_view is not None and self.definition_view != view.id():
 
-            # print('the goto_definition input view was just deactivated')
+            # print('The goto_definition input view was just deactivated')
             self.definition_view = None
 
             global last_focused_goto_definition
@@ -964,25 +974,20 @@ class BufferScrollListener(sublime_plugin.EventListener):
         return view.name() == ("Find Results")
 
     def on_text_command(self, view, command_name, args):
-
-        global last_focused_view_name
-        global last_focused_goto_definition
-
-        if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
-
-            self.pre_definition_view = view.window().active_view().id()
-
-            last_focused_view_name = 'None'
-            last_focused_goto_definition = True
-
-            sublime.set_timeout( unlockTheScrollRestoring, 10000 )
+        self.hook_sublime_text_command(view.window(), command_name)
 
     def on_window_command(self, window, command_name, args):
+        self.hook_sublime_text_command(window, command_name)
+
+    def hook_sublime_text_command(self, window, command_name):
 
         global last_focused_view_name
         global last_focused_goto_definition
 
         if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
+
+            # print('On hook_sublime_text_command')
+            self.pre_definition_view = window.active_view().id()
 
             last_focused_view_name = 'None'
             last_focused_goto_definition = True
