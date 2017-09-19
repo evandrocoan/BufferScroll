@@ -40,11 +40,12 @@ try:
     # 2   - Original levels from tito
     #
     # 127 - All debugging levels at the same time.
-    debug_tools.g_debug_level = 0
+    debug_tools.debugger_name = 'BufferScroll'
+    debug_tools.g_debug_level = 127
 
-    log( 1, "Debugging" )
-    log( 1, "..." )
-    log( 1, "..." )
+    # log( 1, "Debugging" )
+    # log( 1, "..." )
+    # log( 1, "..." )
 
 except:
     pass
@@ -97,11 +98,13 @@ def plugin_loaded():
     # threads listening scroll, and waiting to set data on focus change
     if not 'running_synch_data_loop' in globals():
         global running_synch_data_loop
+
         running_synch_data_loop = True
         thread.start_new_thread(synch_data_loop, ())
 
     if not 'running_synch_scroll_loop' in globals():
         global running_synch_scroll_loop
+
         running_synch_scroll_loop = True
         thread.start_new_thread(synch_scroll_loop, ())
 
@@ -463,13 +466,10 @@ class BufferScroll(sublime_plugin.EventListener):
 
     def restore_scrolling(self, view, where = 'unknow'):
 
-        global last_focused_view_name
         global scroll_already_restored
         global disable_scroll_restoring
-        global g_isToAllowSelectOperationOnTheClonedView
 
-        # log( 1, "disable_scroll_restoring: " + str( disable_scroll_restoring ) )
-
+        # log( 1, "on restore_scrolling, disable_scroll_restoring: " + str( disable_scroll_restoring ) )
         if disable_scroll_restoring:
 
             return
@@ -485,6 +485,9 @@ class BufferScroll(sublime_plugin.EventListener):
         if view.is_loading():
             sublime.set_timeout(lambda: self.restore_scrolling(view, where), 100)
         else:
+            global last_focused_view_name
+            global g_isToAllowSelectOperationOnTheClonedView
+
             scroll_already_restored[view.id()] = True
 
             if last_focused_view_name == '-None-None' \
@@ -562,17 +565,14 @@ class BufferScroll(sublime_plugin.EventListener):
         global already_restored
         global disable_scroll_restoring
 
-        # log( 1, "disable_scroll_restoring: " + str( disable_scroll_restoring ) )
-
+        # log( 1, "on restore, disable_scroll_restoring: " + str( disable_scroll_restoring ) )
         if disable_scroll_restoring:
-
             return
 
         if view is None \
                 or not view.file_name() \
                 or view.settings().get('is_widget') \
                 or view.id() in already_restored:
-
             return
 
         if view.is_loading():
@@ -946,25 +946,21 @@ class BufferScrollListener(sublime_plugin.EventListener):
             This works because the on_deactivated_async(2) is called a little latter than on_deactivated(2).
             Therefore when we are leaving the `Find Results` view, we may correctly set the state for
             `disable_scroll_restoring` enabling and disabling it respectively.
-        """
 
-        if self.isFindResultsView:
-            global disable_scroll_restoring
-            disable_scroll_restoring = True
-
-    def on_deactivated_async( self, view ):
-        """
             On the lasted Sublime Text version 3144, `on_deactivated_async` is being called too fast
             so we only can disable the `disable_scroll_restoring` when we know we are on the
             `self.isFindResultsView` hook call.
         """
-        # log( 1,'On self.isFindResultsView on_deactivated_async' )
+        # global disable_scroll_restoring
+        # log( 1, "" )
+        # log( 1, "%-20s is restore disabled: %6s" % ( 'on_deactivated_async', str( disable_scroll_restoring ) ) )
 
         if self.isFindResultsView:
             global disable_scroll_restoring
+            sublime.set_timeout( unlockTheScrollRestoring, 3000 )
 
             self.isFindResultsView   = False
-            disable_scroll_restoring = False
+            disable_scroll_restoring = True
 
     def on_activated_async(self, view):
         """
@@ -977,6 +973,8 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
             https://forum.sublimetext.com/t/how-to-detect-when-the-user-closed-the-goto-definition-box/25800
         """
+        # global disable_scroll_restoring
+        # log( 1, "%-20s is restore disabled: %6s" % ( 'on_activated_async', str( disable_scroll_restoring ) ) )
 
         if self.is_find_results_view( view ):
             self.isFindResultsView = True
@@ -1006,15 +1004,15 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
     def hook_sublime_text_command(self, window, command_name):
 
-        global last_focused_view_name
-        global disable_scroll_restoring
-
         if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
+
+            global last_focused_view_name
+            global disable_scroll_restoring
 
             # log( 1,'On hook_sublime_text_command' )
             self.pre_definition_view = window.active_view().id()
 
-            last_focused_view_name = 'None'
+            last_focused_view_name   = 'None'
             disable_scroll_restoring = True
 
             sublime.set_timeout( unlockTheScrollRestoring, 10000 )
