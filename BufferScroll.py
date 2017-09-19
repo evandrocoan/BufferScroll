@@ -59,7 +59,7 @@ s = {}
 already_restored = {}
 scroll_already_restored = {}
 last_focused_view_name = ''
-last_focused_goto_definition = False
+disable_scroll_restoring = False
 
 g_isToAllowSelectOperationOnTheClonedView = False
 
@@ -465,12 +465,12 @@ class BufferScroll(sublime_plugin.EventListener):
 
         global last_focused_view_name
         global scroll_already_restored
-        global last_focused_goto_definition
+        global disable_scroll_restoring
         global g_isToAllowSelectOperationOnTheClonedView
 
-        # log( 1, "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # log( 1, "disable_scroll_restoring: " + str( disable_scroll_restoring ) )
 
-        if last_focused_goto_definition:
+        if disable_scroll_restoring:
 
             return
 
@@ -490,11 +490,11 @@ class BufferScroll(sublime_plugin.EventListener):
             if last_focused_view_name == '-None-None' \
                     or last_focused_view_name == 'None' \
                     or last_focused_view_name == 'Find Results-None-None' \
-                    or last_focused_goto_definition \
+                    or disable_scroll_restoring \
                     or last_focused_view_name.endswith('-True'):
 
                 pass
-                # last_focused_goto_definition = False
+                # disable_scroll_restoring = False
 
             # Here we cannot perform the operation to restore on the just cloned view
             elif not g_isToAllowSelectOperationOnTheClonedView:
@@ -560,11 +560,11 @@ class BufferScroll(sublime_plugin.EventListener):
     def restore( self, view, where = 'unknow', isOnActaved = False ):
 
         global already_restored
-        global last_focused_goto_definition
+        global disable_scroll_restoring
 
-        # log( 1, "last_focused_goto_definition: " + str( last_focused_goto_definition ) )
+        # log( 1, "disable_scroll_restoring: " + str( disable_scroll_restoring ) )
 
-        if last_focused_goto_definition:
+        if disable_scroll_restoring:
 
             return
 
@@ -925,8 +925,8 @@ def synch_data_loop():
 def unlockTheScrollRestoring():
     # log( 1,'On unlockTheScrollRestoring' )
 
-    global last_focused_goto_definition
-    last_focused_goto_definition = False
+    global disable_scroll_restoring
+    disable_scroll_restoring = False
 
 
 
@@ -945,26 +945,26 @@ class BufferScrollListener(sublime_plugin.EventListener):
 
             This works because the on_deactivated_async(2) is called a little latter than on_deactivated(2).
             Therefore when we are leaving the `Find Results` view, we may correctly set the state for
-            `last_focused_goto_definition` enabling and disabling it respectively.
+            `disable_scroll_restoring` enabling and disabling it respectively.
         """
 
         if self.isFindResultsView:
-            global last_focused_goto_definition
-            last_focused_goto_definition = True
+            global disable_scroll_restoring
+            disable_scroll_restoring = True
 
     def on_deactivated_async( self, view ):
         """
             On the lasted Sublime Text version 3144, `on_deactivated_async` is being called too fast
-            so we only can disable the `last_focused_goto_definition` when we know we are on the
+            so we only can disable the `disable_scroll_restoring` when we know we are on the
             `self.isFindResultsView` hook call.
         """
         # log( 1,'On self.isFindResultsView on_deactivated_async' )
 
         if self.isFindResultsView:
-            global last_focused_goto_definition
+            global disable_scroll_restoring
 
-            self.isFindResultsView       = False
-            last_focused_goto_definition = False
+            self.isFindResultsView   = False
+            disable_scroll_restoring = False
 
     def on_activated_async(self, view):
         """
@@ -992,8 +992,8 @@ class BufferScrollListener(sublime_plugin.EventListener):
             # log( 1,'The goto_definition input view was just deactivated' )
             self.definition_view = None
 
-            global last_focused_goto_definition
-            last_focused_goto_definition = False
+            global disable_scroll_restoring
+            disable_scroll_restoring = False
 
     def is_find_results_view( self, view ):
         return view.name() == ("Find Results")
@@ -1007,7 +1007,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
     def hook_sublime_text_command(self, window, command_name):
 
         global last_focused_view_name
-        global last_focused_goto_definition
+        global disable_scroll_restoring
 
         if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
 
@@ -1015,7 +1015,7 @@ class BufferScrollListener(sublime_plugin.EventListener):
             self.pre_definition_view = window.active_view().id()
 
             last_focused_view_name = 'None'
-            last_focused_goto_definition = True
+            disable_scroll_restoring = True
 
             sublime.set_timeout( unlockTheScrollRestoring, 10000 )
 
