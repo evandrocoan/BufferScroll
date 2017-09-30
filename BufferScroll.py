@@ -89,6 +89,14 @@ def plugin_loaded():
     s = sublime.load_settings('BufferScroll.sublime-settings')
     Pref = Pref()
     Pref.load()
+
+    version         = 7
+    version_current = s.get('version')
+
+    if version_current != version:
+        s.set('version', version)
+
+    sublime.save_settings('BufferScroll.sublime-settings')
     s.clear_on_change('reload')
     s.add_on_change('reload', lambda:Pref.load())
 
@@ -168,12 +176,7 @@ class Pref():
         Pref.synch_scroll_last_view_position             = 0
         Pref.synch_scroll_current_view_object            = None
         Pref.writing_to_disk                             = False
-        version                                          = 7
         debug                                            = s.get('debug', False)
-        version_current                                  = s.get('version')
-        if version_current != version:
-            s.set('version', version)
-            sublime.save_settings('BufferScroll.sublime-settings')
 
     # syntax specific settings
     def get(self, type, view):
