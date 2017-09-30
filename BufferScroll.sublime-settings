@@ -1,49 +1,59 @@
 {
-	/* this is used for allowing to use more than 1 colour scheme at the same time in different views */
+	// This is used for allowing to use more than 1 colour scheme at the same time in different
+	// views
 	"remember_color_scheme": false,
 	"remember_syntax": false,
 
-	/* allows to keep in sync bookmarks, marks or folds across cloned views */
+	// Allows to keep in sync bookmarks, marks or folds across cloned views
 	"synch_bookmarks": false,
 	"synch_folds": false,
 	"synch_marks": false,
 
-	/* this allow to sync the scroll of the clones of a view */
+	// This allow to sync the scroll of the clones of a view
 	"synch_scroll": false,
 
-	/* this allows you to stop restoring scroll in case of conflicting with some other package, example CTags */
+	// This allows you to stop restoring scroll in case of conflicting with some other package,
+	// example CTags
 	"restore_scroll": true,
 
-	/* The line you work with is automatically the vertical center of the screen. */
+	// The line you work with is automatically the vertical center of the screen.
 	"typewriter_scrolling": false,
-	"typewriter_scrolling_shift": "0", //shift the focused line by this number (positive or negative).
-	"typewriter_scrolling_follow_cursor_movement": true,
+
+	// Shift the focused line by this number (positive or negative).
+	"typewriter_scrolling_shift": "0",
+	"typewriter_scrolling_follow_cursor_movement": false,
 
 	/* ST has animations for when scrolling, these are disabled by default */
 	"use_animations": false,
 
-	/* the same file, can have many different data saved depending the position of the file in the application (example file.txt in window1 has scroll line 30, file.txt in window2 has scroll in line 40) -
-		If you don't use cloned views, set this to false, to always restore the last scroll position */
+	// the same file, can have many different data saved depending the position of the file in the
+	// application (example file.txt in window1 has scroll line 30, file.txt in window2 has scroll
+	// in line 40) - If you don't use cloned views, set this to false, to always restore the last
+	// scroll position
 	"i_use_cloned_views": false,
 
-	"max_database_records": 500,
+	// How much file to remember its last data
+	"max_database_records": 1000,
 
-	/* remembers the following view settings */
-	"remember_settings_list": [
-		"spell_check"
+	// remembers the following view settings
+	"remember_settings_list":
+	[
+		"spell_check",
+		"auto_wrap",
+		"rulers",
 	],
 
-	/* any syntax specific settings you want.. o_O (Note: lowercase syntax names)*/
-
-	"plain text": {
+	// Any syntax specific settings you want.. o_O (Note: lowercase syntax names
+	"plain text":
+	{
 		"synch_scroll": false
 	},
 
-	"python": {
+	"python":
+	{
 		"use_animations": false
 	},
-	/* etc */
 
+	// etc
 	"debug": false
-
 }
