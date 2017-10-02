@@ -26,29 +26,26 @@ def assert_path(module):
         sys.path.append( module )
 
 # Import the debug tools
-assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools' ) )
+assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools/all' ) )
 
 # Import the debugger
-try:
-    import debug_tools
-    from debug_tools import log
+from debug_tools import Debugger
 
-    # Enable debug messages: (bitwise)
-    #
-    # 0   - Disabled debugging.
-    # 1   - Basic logging messages.
-    # 2   - Original levels from tito
-    #
-    # 127 - All debugging levels at the same time.
-    debug_tools.debugger_name = 'BufferScroll'
-    debug_tools.g_debug_level = 127
+# Enable debug messages: (bitwise)
+#
+# 0   - Disabled debugging.
+# 1   - Basic logging messages.
+# 2   - Original levels from tito
+#
+# Debugger settings: 0 - disabled, 127 - enabled
+log = Debugger( 127, os.path.basename( __file__ ) )
 
-    # log( 1, "Debugging" )
-    # log( 1, "..." )
-    # log( 1, "..." )
+#log.log_to_file( "Debug.txt" )
+#log.clear_log_file()
 
-except:
-    pass
+# log( 1, "Debugging" )
+# log( 1, "..." )
+# log( 1, "..." )
 
 # import inspect
 debug = {}
