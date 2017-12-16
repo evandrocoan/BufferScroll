@@ -17,14 +17,6 @@ import sys
 import time
 from os.path import basename
 
-def assert_path(module):
-    """
-        Import a module from a relative path
-        https://stackoverflow.com/questions/279237/import-a-module-from-a-relative-path
-    """
-    if module not in sys.path:
-        sys.path.append( module )
-
 
 # Import the debugger
 from python_debug_tools import Debugger
