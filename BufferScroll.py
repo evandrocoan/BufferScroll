@@ -19,7 +19,7 @@ from os.path import basename
 
 
 # Import the debugger
-from python_debug_tools import Debugger
+from python_debug_tools import getLogger
 
 # Enable debug messages: (bitwise)
 #
@@ -28,9 +28,9 @@ from python_debug_tools import Debugger
 # 2   - Original levels from tito
 #
 # Debugger settings: 0 - disabled, 127 - enabled
-log = Debugger( 127, os.path.basename( __file__ ) )
+log = getLogger( 127, os.path.basename( __file__ ) )
 
-#log.log_to_file( "Debug.txt" )
+#log.set_file_logger( "Debug.txt" )
 #log.clear_log_file()
 
 # log( 1, "Debugging" )
