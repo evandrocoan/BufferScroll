@@ -30,8 +30,8 @@ from python_debug_tools import getLogger
 # Debugger settings: 0 - disabled, 127 - enabled
 log = getLogger( 127, os.path.basename( __file__ ) )
 
-#log.setup_logger( "Debug.txt" )
-#log.clear_log_file()
+#log.setup( "Debug.txt" )
+#log.clear()
 
 # log( 1, "Debugging" )
 # log( 1, "..." )
