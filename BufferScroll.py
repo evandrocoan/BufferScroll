@@ -218,7 +218,7 @@ class BufferScroll(sublime_plugin.EventListener):
             command line with `subl file.txt 100:9` (Line 100, Column 9).
         """
         is_allowed = self._scroll_restoring_allowed( view )
-        log( 1, "is_allowed: %s", is_allowed )
+        # log( 1, "is_allowed: %s", is_allowed )
 
         if is_allowed:
             self.restore(view, 'on_load')
@@ -237,7 +237,7 @@ class BufferScroll(sublime_plugin.EventListener):
         selection = view.sel()
 
         if selection:
-            log( 1, "selection[0]: %s", selection[0] )
+            # log( 1, "selection[0]: %s", selection[0] )
             return selection[0].end() < 1
 
         return True
@@ -998,6 +998,6 @@ def synch_data_loop():
 def unlockTheScrollRestoring():
     global disable_scroll_restoring
 
-    log( 1,'disable_scroll_restoring: %s', disable_scroll_restoring )
+    # log( 1,'disable_scroll_restoring: %s', disable_scroll_restoring )
     disable_scroll_restoring = False
 
