@@ -222,38 +222,39 @@ class BufferScrollSaveThread(threading.Thread):
 
 class BufferScroll(sublime_plugin.EventListener):
 
-    def init_(self):
-        """
-            ST BUG https://github.com/SublimeTextIssues/Core/issues/5
-            the application is not sending on_load when opening/restoring a window,
-            then there is this hack which will simulate or synthesize an on_load when you open the application
-            since this is just a hack, there is a terrible noticeable delay, which just sucks.
-
-            Update 2017: This is not a bug and it is how it is supposed to happen!
-            https://github.com/SublimeTextIssues/Core/issues/1508
-
-            What this does actually is create bugs when there are cloned view opened. Sublime Text
-            already restore the scroll's and cursor's of the views when opening a new window or when
-            first starting.
-        """
-        pass
-        # self.on_load_async(sublime.active_window().active_view())
-
-        # views   = None
-        # windows = sublime.windows()
-
-        # for window in windows:
-
-        #     views = window.views()
-
-        #     for view in views:
-
-        #         self.on_load_async( view )
-
-
-    # restore on load for new opened tabs or previews.
     def on_load_async(self, view):
-        self.restore(view, 'on_load')
+        """
+            Restore on load for new opened tabs or previews.
+
+            When the view is opened synchronously, check if the caret/curso is on the first line
+            position. If it is, then we can restore the scroll and caret/cursor positions.
+            Otherwise, it is some fancy feature as Go To Symbol or a file which was opened with the
+            command line with `subl file.txt 100:9` (Line 100, Column 9).
+        """
+        is_allowed = self._scroll_restoring_allowed( view )
+        log( 1, "is_allowed: %s", is_allowed )
+
+        if is_allowed:
+            self.restore(view, 'on_load')
+
+        else:
+            global disable_scroll_restoring
+
+            sublime.set_timeout( unlockTheScrollRestoring, 3000 )
+            disable_scroll_restoring = True
+
+    def _scroll_restoring_allowed(self, view):
+        """
+            Returns True when the view is allowed to be restored by its caret and scroll position,
+            False otherwise.
+        """
+        selection = view.sel()
+
+        if selection:
+            log( 1, "selection[0]: %s", selection[0] )
+            return selection[0].end() < 1
+
+        return True
 
     # ST BUG tps://github.com/SublimeTextIssues/Core/issues/9
     def on_reload_async(self, view):
@@ -316,6 +317,14 @@ class BufferScroll(sublime_plugin.EventListener):
     # save data for focused tab when saving
     def on_pre_save(self, view):
         self.save(view, 'on_pre_save')
+
+    def on_post_text_command(self, view, command_name, args):
+
+        # typewriter_scrolling
+        if (command_name == 'move' or  command_name == 'move_to') \
+                and Pref.get('typewriter_scrolling_follow_cursor_movement', view):
+
+            BufferScrollAPI.on_modified(view)
 
     # typewriter scrolling
     def on_modified(self, view):
@@ -461,7 +470,6 @@ class BufferScroll(sublime_plugin.EventListener):
 
         # log( 1, "on restore_scrolling, disable_scroll_restoring: " + str( disable_scroll_restoring ) )
         if disable_scroll_restoring:
-
             return
 
         if view is None \
@@ -475,22 +483,13 @@ class BufferScroll(sublime_plugin.EventListener):
         if view.is_loading():
             sublime.set_timeout(lambda: self.restore_scrolling(view, where), 100)
         else:
+            scroll_already_restored[view.id()] = True
+
             global last_focused_view_name
             global g_isToAllowSelectOperationOnTheClonedView
 
-            scroll_already_restored[view.id()] = True
-
-            if last_focused_view_name == '-None-None' \
-                    or last_focused_view_name == 'None' \
-                    or last_focused_view_name == 'Find Results-None-None' \
-                    or disable_scroll_restoring \
-                    or last_focused_view_name.endswith('-True'):
-
-                pass
-                # disable_scroll_restoring = False
-
             # Here we cannot perform the operation to restore on the just cloned view
-            elif not g_isToAllowSelectOperationOnTheClonedView:
+            if not g_isToAllowSelectOperationOnTheClonedView:
                 id, index = self.view_id(view)
 
                 # log( 2, "" )
@@ -551,7 +550,6 @@ class BufferScroll(sublime_plugin.EventListener):
 
 
     def restore( self, view, where = 'unknow', isOnActaved = False ):
-
         global already_restored
         global disable_scroll_restoring
 
@@ -901,8 +899,6 @@ def synch_scroll_loop():
             sublime.set_timeout(lambda:synch_scroll(), 0)
         time.sleep(0.08)
 
-
-
 def synch_data_loop():
     synch_data = BufferScrollAPI.synch_data
     while True:
@@ -910,115 +906,9 @@ def synch_data_loop():
             sublime.set_timeout(lambda:synch_data(None, 'thread'), 0)
         time.sleep(0.5)
 
-
-
 def unlockTheScrollRestoring():
-    # log( 1,'On unlockTheScrollRestoring' )
-
     global disable_scroll_restoring
+
+    log( 1,'disable_scroll_restoring: %s', disable_scroll_restoring )
     disable_scroll_restoring = False
-
-
-
-class BufferScrollListener(sublime_plugin.EventListener):
-
-    definition_view     = None
-    pre_definition_view = None
-
-    isFindResultsView   = False
-
-    def on_deactivated( self, view ):
-        """
-            The forwards on_deactivated(2) and on_deactivated_async(2) are used to allow the silent
-            go to inside a `Find Results` view. It keep us from restoring the last scroll on the opened
-            file, overriding the line we are jumping from the `Find Results` to a search result file.
-
-            This works because the on_deactivated_async(2) is called a little latter than on_deactivated(2).
-            Therefore when we are leaving the `Find Results` view, we may correctly set the state for
-            `disable_scroll_restoring` enabling and disabling it respectively.
-
-            On the lasted Sublime Text version 3144, `on_deactivated_async` is being called too fast
-            so we only can disable the `disable_scroll_restoring` when we know we are on the
-            `self.isFindResultsView` hook call.
-        """
-        # global disable_scroll_restoring
-        # log( 1, "" )
-        # log( 1, "%-20s is restore disabled: %6s" % ( 'on_deactivated_async', str( disable_scroll_restoring ) ) )
-
-        if self.isFindResultsView:
-            global disable_scroll_restoring
-            sublime.set_timeout( unlockTheScrollRestoring, 3000 )
-
-            self.isFindResultsView   = False
-            disable_scroll_restoring = True
-
-    def on_activated_async(self, view):
-        """
-            It is possible to click outside the goto definition input box and the quick panel
-            stays visible, so this won't work in that case, and on_close isn't fired when the
-            quick panel really is closed. If you just care about when the user is typing in this
-            view, it should be enough to ignore the quick panel view in your plugin because the
-            id doesn't seem to get reused. But, I'm not sure how to tell when it has been closed,
-            without making changes to Packages/Default/symbols.py which I wouldn't recommend
-
-            https://forum.sublimetext.com/t/how-to-detect-when-the-user-closed-the-goto-definition-box/25800
-        """
-        # global disable_scroll_restoring
-        # log( 1, "%-20s is restore disabled: %6s" % ( 'on_activated_async', str( disable_scroll_restoring ) ) )
-
-        if self.is_find_results_view( view ):
-            self.isFindResultsView = True
-
-        if self.pre_definition_view is not None:
-
-            # log( 1,'Calling goto_definition from view.id:', view.id(), ', to the view.id:', self.pre_definition_view )
-            self.definition_view = view.id()
-            self.pre_definition_view = None
-
-        elif self.definition_view is not None and self.definition_view != view.id():
-
-            # log( 1,'The goto_definition input view was just deactivated' )
-            self.definition_view = None
-
-            global disable_scroll_restoring
-            disable_scroll_restoring = False
-
-    def is_find_results_view( self, view ):
-        return view.name() == ("Find Results")
-
-    def on_text_command(self, view, command_name, args):
-        self.hook_sublime_text_command(view.window(), command_name)
-
-    def on_window_command(self, window, command_name, args):
-        self.hook_sublime_text_command(window, command_name)
-
-    def hook_sublime_text_command(self, window, command_name):
-
-        if command_name in ( 'goto_definition', 'navigate_to_definition', 'context_goto_definition' ):
-
-            global last_focused_view_name
-            global disable_scroll_restoring
-
-            # log( 1,'On hook_sublime_text_command' )
-            self.pre_definition_view = window.active_view().id()
-
-            last_focused_view_name   = 'None'
-            disable_scroll_restoring = True
-
-            sublime.set_timeout( unlockTheScrollRestoring, 10000 )
-
-    def on_post_text_command(self, view, command_name, args):
-
-        # typewriter_scrolling
-        if (command_name == 'move' or  command_name == 'move_to') \
-                and Pref.get('typewriter_scrolling_follow_cursor_movement', view):
-
-            BufferScrollAPI.on_modified(view)
-
-    # def on_post_window_command(self, window, command_name, args):
-    #     pass
-
-
-
-
 
