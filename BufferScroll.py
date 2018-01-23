@@ -79,8 +79,8 @@ def plugin_loaded():
     Preferences = Preferences()
     Preferences.load()
 
-    g_settings.clear_on_change('reload')
-    g_settings.add_on_change('reload', lambda:Preferences.load())
+    g_settings.clear_on_change('BufferScroll')
+    g_settings.add_on_change('BufferScroll', lambda:Preferences.load())
 
     BufferScrollAPI = BufferScroll()
 
@@ -99,7 +99,7 @@ def plugin_loaded():
 
 
 def plugin_unloaded():
-    g_settings.clear_on_change('reload')
+    g_settings.clear_on_change('BufferScroll')
 
 
 def is_cloned_view( target_view ):
