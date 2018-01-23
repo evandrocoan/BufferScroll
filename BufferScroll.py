@@ -38,7 +38,6 @@ log = getLogger( 127, os.path.basename( __file__ ) )
 # log( 1, "..." )
 
 # import inspect
-debug = {}
 database = {}
 Preferences = {}
 BufferScrollAPI = {}
@@ -52,8 +51,7 @@ disable_scroll_restoring = False
 g_isToAllowSelectOperationOnTheClonedView = False
 
 def plugin_loaded():
-    global debug, database, Preferences, BufferScrollAPI, data_base, g_settings
-    debug = False
+    global database, Preferences, BufferScrollAPI, data_base, g_settings
 
     # open
     data_base = OrderedDict()
@@ -119,7 +117,6 @@ def is_cloned_view( target_view ):
 
 class Preferences():
     def load(self):
-        global debug
         Preferences.remember_color_scheme                       = g_settings.get('remember_color_scheme', False)
         Preferences.remember_syntax                             = g_settings.get('remember_syntax', False)
         Preferences.synch_bookmarks                             = g_settings.get('synch_bookmarks', False)
@@ -143,7 +140,6 @@ class Preferences():
         Preferences.synch_scroll_last_view_position             = 0
         Preferences.synch_scroll_current_view_object            = None
         Preferences.writing_to_disk                             = False
-        debug                                            = g_settings.get('debug', False)
 
     # syntax specific settings
     def get(self, type, view):
