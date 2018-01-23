@@ -40,10 +40,10 @@ log = getLogger( 127, os.path.basename( __file__ ) )
 # import inspect
 debug = {}
 database = {}
-Pref = {}
+Preferences = {}
 BufferScrollAPI = {}
-db = OrderedDict()
-s = {}
+data_base = OrderedDict()
+g_settings = {}
 already_restored = {}
 scroll_already_restored = {}
 last_focused_view_name = ''
@@ -52,12 +52,11 @@ disable_scroll_restoring = False
 g_isToAllowSelectOperationOnTheClonedView = False
 
 def plugin_loaded():
-
-    global debug, database, Pref, BufferScrollAPI, db, s
+    global debug, database, Preferences, BufferScrollAPI, data_base, g_settings
     debug = False
 
     # open
-    db = OrderedDict()
+    data_base = OrderedDict()
     database = dirname(sublime.packages_path())+'/Settings/BufferScroll.bin.gz'
     try:
         makedirs(dirname(database))
@@ -65,30 +64,29 @@ def plugin_loaded():
         pass
     try:
         gz = GzipFile(database, 'rb')
-        db = load(gz);
+        data_base = load(gz);
         gz.close()
-        if not isinstance(db, OrderedDict):
-            db = OrderedDict(db)
+        if not isinstance(data_base, OrderedDict):
+            data_base = OrderedDict(data_base)
     except:
-        db = OrderedDict()
+        data_base = OrderedDict()
 
     # settings
-    s = sublime.load_settings('BufferScroll.sublime-settings')
-    Pref = Pref()
-    Pref.load()
+    g_settings = sublime.load_settings('BufferScroll.sublime-settings')
+    Preferences = Preferences()
+    Preferences.load()
 
     version         = 7
-    version_current = s.get('version')
+    version_current = g_settings.get('version')
 
     if version_current != version:
-        s.set('version', version)
+        g_settings.set('version', version)
 
     sublime.save_settings('BufferScroll.sublime-settings')
-    s.clear_on_change('reload')
-    s.add_on_change('reload', lambda:Pref.load())
+    g_settings.clear_on_change('reload')
+    g_settings.add_on_change('reload', lambda:Preferences.load())
 
     BufferScrollAPI = BufferScroll()
-    BufferScrollAPI.init_()
 
     # threads listening scroll, and waiting to set data on focus change
     if not 'running_synch_data_loop' in globals():
@@ -137,33 +135,33 @@ class SampleListener(sublime_plugin.EventListener):
             g_isToAllowSelectOperationOnTheClonedView = True
 
 
-class Pref():
+class Preferences():
     def load(self):
         global debug
-        Pref.remember_color_scheme                       = s.get('remember_color_scheme', False)
-        Pref.remember_syntax                             = s.get('remember_syntax', False)
-        Pref.synch_bookmarks                             = s.get('synch_bookmarks', False)
-        Pref.synch_marks                                 = s.get('synch_marks', False)
-        Pref.synch_folds                                 = s.get('synch_folds', False)
-        Pref.synch_scroll                                = s.get('synch_scroll', False)
-        Pref.typewriter_scrolling                        = s.get('typewriter_scrolling', False)
-        Pref.typewriter_scrolling_shift                  = int(s.get('typewriter_scrolling_shift', 0))
-        Pref.typewriter_scrolling_follow_cursor_movement = s.get('typewriter_scrolling_follow_cursor_movement', True)
-        Pref.use_animations                              = s.get('use_animations', False)
-        Pref.i_use_cloned_views                          = s.get('i_use_cloned_views', False)
-        Pref.max_database_records                        = s.get('max_database_records', 500)
-        Pref.restore_scroll                              = s.get('restore_scroll', True)
-        Pref.remember_settings_list                      = s.get('remember_settings_list', [])
+        Preferences.remember_color_scheme                       = g_settings.get('remember_color_scheme', False)
+        Preferences.remember_syntax                             = g_settings.get('remember_syntax', False)
+        Preferences.synch_bookmarks                             = g_settings.get('synch_bookmarks', False)
+        Preferences.synch_marks                                 = g_settings.get('synch_marks', False)
+        Preferences.synch_folds                                 = g_settings.get('synch_folds', False)
+        Preferences.synch_scroll                                = g_settings.get('synch_scroll', False)
+        Preferences.typewriter_scrolling                        = g_settings.get('typewriter_scrolling', False)
+        Preferences.typewriter_scrolling_shift                  = int(g_settings.get('typewriter_scrolling_shift', 0))
+        Preferences.typewriter_scrolling_follow_cursor_movement = g_settings.get('typewriter_scrolling_follow_cursor_movement', True)
+        Preferences.use_animations                              = g_settings.get('use_animations', False)
+        Preferences.i_use_cloned_views                          = g_settings.get('i_use_cloned_views', False)
+        Preferences.max_database_records                        = g_settings.get('max_database_records', 500)
+        Preferences.restore_scroll                              = g_settings.get('restore_scroll', True)
+        Preferences.remember_settings_list                      = g_settings.get('remember_settings_list', [])
 
-        Pref.current_view_id                             = -1
+        Preferences.current_view_id                             = -1
 
-        Pref.synch_data_running                          = False
-        Pref.synch_scroll_running                        = False
-        Pref.synch_scroll_last_view_id                   = 0
-        Pref.synch_scroll_last_view_position             = 0
-        Pref.synch_scroll_current_view_object            = None
-        Pref.writing_to_disk                             = False
-        debug                                            = s.get('debug', False)
+        Preferences.synch_data_running                          = False
+        Preferences.synch_scroll_running                        = False
+        Preferences.synch_scroll_last_view_id                   = 0
+        Preferences.synch_scroll_last_view_position             = 0
+        Preferences.synch_scroll_current_view_object            = None
+        Preferences.writing_to_disk                             = False
+        debug                                            = g_settings.get('debug', False)
 
     # syntax specific settings
     def get(self, type, view):
@@ -174,18 +172,18 @@ class Pref():
             syntax = basename(syntax).split('.')[0].lower() if syntax != None else "plain text"
             view.settings().set('bs_sintax', syntax);
 
-        # log( 1, "Pref: " + str( Pref ) )
-        # log( 1, "Pref: " + syntax )
+        # log( 1, "Preferences: " + str( Preferences ) )
+        # log( 1, "Preferences: " + syntax )
 
-        if syntax and hasattr(Pref, syntax) and type in getattr(Pref, syntax):
-            return getattr(Pref, syntax)[type];
-        elif syntax and hasattr(Pref, syntax) and type not in getattr(Pref, syntax):
-            return getattr(Pref, type)
-        elif syntax and s.has(syntax):
-            setattr(Pref, syntax, s.get(syntax))
+        if syntax and hasattr(Preferences, syntax) and type in getattr(Preferences, syntax):
+            return getattr(Preferences, syntax)[type];
+        elif syntax and hasattr(Preferences, syntax) and type not in getattr(Preferences, syntax):
+            return getattr(Preferences, type)
+        elif syntax and g_settings.has(syntax):
+            setattr(Preferences, syntax, g_settings.get(syntax))
             self.get(type, view);
         else:
-            return getattr(Pref, type)
+            return getattr(Preferences, type)
 
 
 
@@ -195,18 +193,18 @@ class BufferScrollSaveThread(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        if not Pref.writing_to_disk:
-            Pref.writing_to_disk = True
+        if not Preferences.writing_to_disk:
+            Preferences.writing_to_disk = True
 
             # log( 2, "" )
             # log( 2, 'WRITING TO DISK' )
             start = time.time()
 
-            while len(db) > Pref.max_database_records:
-                db.popitem(last = False)
+            while len(data_base) > Preferences.max_database_records:
+                data_base.popitem(last = False)
 
             gz = GzipFile(database+'.tmp', 'wb')
-            dump(db, gz, -1)
+            dump(data_base, gz, -1)
             gz.close()
             try:
                 remove(database)
@@ -218,7 +216,7 @@ class BufferScrollSaveThread(threading.Thread):
                 pass
 
             # log( 2, 'time expend writting to disk', time.time()-start )
-            Pref.writing_to_disk = False
+            Preferences.writing_to_disk = False
 
 class BufferScroll(sublime_plugin.EventListener):
 
@@ -298,8 +296,8 @@ class BufferScroll(sublime_plugin.EventListener):
         view_id = view.id()
 
         if not view.settings().get('is_widget'):
-            Pref.current_view_id = view_id
-            Pref.synch_scroll_current_view_object = view
+            Preferences.current_view_id = view_id
+            Preferences.synch_scroll_current_view_object = view
 
         # if view_id not in already_restored:
         #     self.restore( view, 'on_activated', 'on_activated_async', True)
@@ -322,7 +320,7 @@ class BufferScroll(sublime_plugin.EventListener):
 
         # typewriter_scrolling
         if (command_name == 'move' or  command_name == 'move_to') \
-                and Pref.get('typewriter_scrolling_follow_cursor_movement', view):
+                and Preferences.get('typewriter_scrolling_follow_cursor_movement', view):
 
             BufferScrollAPI.on_modified(view)
 
@@ -332,12 +330,12 @@ class BufferScroll(sublime_plugin.EventListener):
         There is a error which could pop some times directly to this line.
 
         Traceback (most recent call last):
-          File "D:\SublimeText\sublime_plugin.py", line 389, in run_callback
+          File "D:/SublimeText/sublime_plugin.py", line 389, in run_callback
             expr()
-          File "D:\SublimeText\sublime_plugin.py", line 488, in <lambda>
+          File "D:/SublimeText/sublime_plugin.py", line 488, in <lambda>
             run_callback('on_modified', callback, lambda: callback.on_modified(v))
-          File "D:\SublimeText\Data\Packages\BufferScroll\BufferScroll.py", line 304, in on_modified
-            if not view.settings().get('is_widget') and not view.is_scratch() and len(view.sel()) == 1 and Pref.get('typewriter_scrolling', view):
+          File "D:/SublimeText/Data/Packages/BufferScroll/BufferScroll.py", line 304, in on_modified
+            if not view.settings().get('is_widget') and not view.is_scratch() and len(view.sel()) == 1 and Preferences.get('typewriter_scrolling', view):
         TypeError: get() missing 1 required positional argument: 'view'
 
         Issue: https://github.com/evandrocoan/SublimeTextStudio/issues/49
@@ -346,7 +344,7 @@ class BufferScroll(sublime_plugin.EventListener):
         if not view.settings().get('is_widget') \
                 and not view.is_scratch() \
                 and len(view.sel()) == 1 \
-                and Pref.get('typewriter_scrolling', view):
+                and Preferences.get('typewriter_scrolling', view):
             window = view.window();
 
             if not window:
@@ -357,7 +355,7 @@ class BufferScroll(sublime_plugin.EventListener):
             # log( 2, "" )
             # log( 2, 'TYPEWRITER_SCROLLING' )
             line, col = view.rowcol(view.sel()[0].b)
-            line = line-Pref.typewriter_scrolling_shift
+            line = line-Preferences.typewriter_scrolling_shift
             if line < 1:
                 line = 0
             point = view.text_point(line, col)
@@ -385,70 +383,70 @@ class BufferScroll(sublime_plugin.EventListener):
             # log( 2, 'position: '+index )
 
             # creates an object for this view, if it is unknow to the package
-            if id not in db:
-                db[id] = {}
+            if id not in data_base:
+                data_base[id] = {}
 
             # if the result of the new collected data is different
             # from the old data, then will write to disk
             # this will hold the old value for comparation
-            old_db = dict(db[id])
+            old_db = dict(data_base[id])
 
             # if the size of the view change outside the application skip restoration
             # if not we will restore folds in funny positions, etc...
-            db[id]['id'] = int(view.size())
+            data_base[id]['id'] = int(view.size())
 
             # scroll
-            if 'l' not in db[id]:
-                db[id]['l'] = {}
+            if 'l' not in data_base[id]:
+                data_base[id]['l'] = {}
             # save the scroll with "index" as the id ( for cloned views )
-            db[id]['l'][index] = list(view.viewport_position())
+            data_base[id]['l'][index] = list(view.viewport_position())
             # also save as default if no exists
             if index != '0':
-                db[id]['l']['0'] = list(view.viewport_position())
-            # log( 2, 'viewport_position: '+str(db[id]['l']['0']) )
+                data_base[id]['l']['0'] = list(view.viewport_position())
+            # log( 2, 'viewport_position: '+str(data_base[id]['l']['0']) )
 
             # selections
-            db[id]['s'] = [[item.a, item.b] for item in view.sel()]
-            # log( 2, 'selections: '+str(db[id]['s']) )
+            data_base[id]['s'] = [[item.a, item.b] for item in view.sel()]
+            # log( 2, 'selections: '+str(data_base[id]['s']) )
 
             # marks
-            db[id]['m'] = [[item.a, item.b] for item in view.get_regions("mark")]
-            # log( 2, 'marks: '+str(db[id]['m']) )
+            data_base[id]['m'] = [[item.a, item.b] for item in view.get_regions("mark")]
+            # log( 2, 'marks: '+str(data_base[id]['m']) )
 
             # bookmarks
-            db[id]['b'] = [[item.a, item.b] for item in view.get_regions("bookmarks")]
-            # log( 2, 'bookmarks: '+str(db[id]['b']) )
+            data_base[id]['b'] = [[item.a, item.b] for item in view.get_regions("bookmarks")]
+            # log( 2, 'bookmarks: '+str(data_base[id]['b']) )
 
             # previous folding save, to be able to refold
-            if 'f' in db[id] and list(db[id]['f']) != []:
-                db[id]['pf'] = list(db[id]['f'])
+            if 'f' in data_base[id] and list(data_base[id]['f']) != []:
+                data_base[id]['pf'] = list(data_base[id]['f'])
 
             # folding
-            db[id]['f'] = [[item.a, item.b] for item in view.folded_regions()]
-            # log( 2, 'fold: '+str(db[id]['f']) )
+            data_base[id]['f'] = [[item.a, item.b] for item in view.folded_regions()]
+            # log( 2, 'fold: '+str(data_base[id]['f']) )
 
             # color_scheme http://www.sublimetext.com/forum/viewtopic.php?p=25624#p25624
-            if Pref.get('remember_color_scheme', view):
-                db[id]['c'] = view.settings().get('color_scheme')
-                # log( 2, 'color_scheme: '+str(db[id]['c']) )
+            if Preferences.get('remember_color_scheme', view):
+                data_base[id]['c'] = view.settings().get('color_scheme')
+                # log( 2, 'color_scheme: '+str(data_base[id]['c']) )
 
             # syntax
-            if Pref.get('remember_syntax', view):
-                db[id]['x'] = view.settings().get('syntax')
-                # log( 2, 'syntax: '+str(db[id]['x']) )
+            if Preferences.get('remember_syntax', view):
+                data_base[id]['x'] = view.settings().get('syntax')
+                # log( 2, 'syntax: '+str(data_base[id]['x']) )
 
             # settings list
-            settings = Pref.get('remember_settings_list', view)
-            db[id]['p'] = []
+            settings = Preferences.get('remember_settings_list', view)
+            data_base[id]['p'] = []
             for item in settings:
                 if item:
                     value = view.settings().get(item, 'waaaaaa')
                     if value != 'waaaaaa':
-                        db[id]['p'].append({'k':item, 'v':value})
+                        data_base[id]['p'].append({'k':item, 'v':value})
 
             # write to disk only if something changed
-            if old_db != db[id] or where == 'on_deactivated':
-                db.move_to_end(id)
+            if old_db != data_base[id] or where == 'on_deactivated':
+                data_base.move_to_end(id)
                 BufferScrollSaveThread().start()
 
     def view_id(self, view):
@@ -500,15 +498,15 @@ class BufferScroll(sublime_plugin.EventListener):
                 # log( 2, 'id: '+id )
                 # log( 2, 'position: '+index )
 
-                if id in db and Pref.get('restore_scroll', view):
+                if id in data_base and Preferences.get('restore_scroll', view):
                     # log( 2, 'DOING...' )
                     # scroll
-                    if Pref.get('i_use_cloned_views', view) and index in db[id]['l']:
-                        position = tuple(db[id]['l'][index])
-                        view.set_viewport_position(position, Pref.use_animations)
+                    if Preferences.get('i_use_cloned_views', view) and index in data_base[id]['l']:
+                        position = tuple(data_base[id]['l'][index])
+                        view.set_viewport_position(position, Preferences.use_animations)
                     else:
-                        position = tuple(db[id]['l']['0'])
-                        view.set_viewport_position(position, Pref.use_animations)
+                        position = tuple(data_base[id]['l']['0'])
+                        view.set_viewport_position(position, Preferences.use_animations)
                     # ugly hack
                     # ugly hack
                     # ugly hack
@@ -578,17 +576,17 @@ class BufferScroll(sublime_plugin.EventListener):
             # log( 2, 'id: '+id )
             # log( 2, 'position: '+index )
 
-            if id in db:
+            if id in data_base:
                 # log( 2, 'DOING...' )
 
                 isClonedView = False
 
                 # if the view changed outside of the application, don't restore folds etc
-                if db[id]['id'] == int(view.size()):
+                if data_base[id]['id'] == int(view.size()):
 
                     # fold
                     rs = []
-                    for r in db[id]['f']:
+                    for r in data_base[id]['f']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.fold(rs)
@@ -598,53 +596,53 @@ class BufferScroll(sublime_plugin.EventListener):
                     isClonedView = is_cloned_view( view )
 
                     # selection
-                    if ( len(db[id]['s']) > 0 and not isClonedView ) or g_isToAllowSelectOperationOnTheClonedView:
+                    if ( len(data_base[id]['s']) > 0 and not isClonedView ) or g_isToAllowSelectOperationOnTheClonedView:
                         view.sel().clear()
-                        for r in db[id]['s']:
+                        for r in data_base[id]['s']:
                             view.sel().add(sublime.Region(int(r[0]), int(r[1])))
-                        # log( 2, 'selection: '+str(db[id]['s'])) ;
+                        # log( 2, 'selection: '+str(data_base[id]['s'])) ;
 
                     # marks
                     rs = []
-                    for r in db[id]['m']:
+                    for r in data_base[id]['m']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.add_regions("mark", rs, "mark", "dot", sublime.HIDDEN | sublime.PERSISTENT)
-                        # log( 2, 'marks: '+str(db[id]['m'])) ;
+                        # log( 2, 'marks: '+str(data_base[id]['m'])) ;
 
                     # bookmarks
                     rs = []
-                    for r in db[id]['b']:
+                    for r in data_base[id]['b']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.add_regions("bookmarks", rs, "bookmarks", "bookmark", sublime.HIDDEN | sublime.PERSISTENT)
-                        # log( 2, 'bookmarks: '+str(db[id]['b'])) ;
+                        # log( 2, 'bookmarks: '+str(data_base[id]['b'])) ;
 
                 # color scheme
-                if Pref.get('remember_color_scheme', view) and 'c' in db[id] and view.settings().get('color_scheme') != db[id]['c']:
-                    view.settings().set('color_scheme', db[id]['c'])
-                    # log( 2, 'color scheme: '+str(db[id]['c'])) ;
+                if Preferences.get('remember_color_scheme', view) and 'c' in data_base[id] and view.settings().get('color_scheme') != data_base[id]['c']:
+                    view.settings().set('color_scheme', data_base[id]['c'])
+                    # log( 2, 'color scheme: '+str(data_base[id]['c'])) ;
 
                 # syntax
-                if Pref.get('remember_syntax', view) and 'x' in db[id] and view.settings().get('syntax') != db[id]['x'] and lexists(dirname(sublime.packages_path())+'/'+db[id]['x']):
-                    view.settings().set('syntax', db[id]['x'])
-                    # log( 2, 'syntax: '+str(db[id]['x'])) ;
+                if Preferences.get('remember_syntax', view) and 'x' in data_base[id] and view.settings().get('syntax') != data_base[id]['x'] and lexists(dirname(sublime.packages_path())+'/'+data_base[id]['x']):
+                    view.settings().set('syntax', data_base[id]['x'])
+                    # log( 2, 'syntax: '+str(data_base[id]['x'])) ;
 
-                if 'p' in db[id]:
-                    for item in Pref.get('remember_settings_list', view):
-                        for i in db[id]['p']:
+                if 'p' in data_base[id]:
+                    for item in Preferences.get('remember_settings_list', view):
+                        for i in data_base[id]['p']:
                             if 'k' in i and i['k'] == item:
                                 view.settings().set(i['k'], i['v'])
                                 break
 
                 # scroll
-                if Pref.get('restore_scroll', view) and Pref.get('i_use_cloned_views', view) and index in db[id]['l']:
-                    position = tuple(db[id]['l'][index])
-                    view.set_viewport_position(position, Pref.use_animations)
+                if Preferences.get('restore_scroll', view) and Preferences.get('i_use_cloned_views', view) and index in data_base[id]['l']:
+                    position = tuple(data_base[id]['l'][index])
+                    view.set_viewport_position(position, Preferences.use_animations)
 
-                elif Pref.get('restore_scroll', view):
-                    position = tuple(db[id]['l']['0'])
-                    view.set_viewport_position(position, Pref.use_animations)
+                elif Preferences.get('restore_scroll', view):
+                    position = tuple(data_base[id]['l']['0'])
+                    view.set_viewport_position(position, Preferences.use_animations)
 
                 # There is not need to an expensive and slow if, when just setting it to false is faster.
                 # if g_isToAllowSelectOperationOnTheClonedView:
@@ -657,7 +655,7 @@ class BufferScroll(sublime_plugin.EventListener):
                 pass
 
     def stupid_scroll(self, view, position):
-        view.set_viewport_position(position, Pref.use_animations)
+        view.set_viewport_position(position, Preferences.use_animations)
 
     # def print_stupid_scroll(self, view):
         # log( 2, 'current scroll for: '+str(view.file_name())) ;
@@ -665,19 +663,19 @@ class BufferScroll(sublime_plugin.EventListener):
 
     def synch_data(self, view = None, where = 'unknow'):
         if view is None:
-            view = Pref.synch_scroll_current_view_object
+            view = Preferences.synch_scroll_current_view_object
 
         if view is None or view.settings().get('is_widget'):
             return
 
         # if there is something to synch
-        if not Pref.get('synch_bookmarks', view) and not Pref.get('synch_marks', view) and not Pref.get('synch_folds', view):
+        if not Preferences.get('synch_bookmarks', view) and not Preferences.get('synch_marks', view) and not Preferences.get('synch_folds', view):
             return
-        Pref.synch_data_running = True
+        Preferences.synch_data_running = True
 
 
         if view.is_loading():
-            Pref.synch_data_running = False
+            Preferences.synch_data_running = False
             sublime.set_timeout(lambda: self.synch_data(view, where), 200)
         else:
 
@@ -690,7 +688,7 @@ class BufferScroll(sublime_plugin.EventListener):
                     if _view.buffer_id() == view.buffer_id() and view.id() != _view.id():
                         clones.append(_view)
             if not clones:
-                Pref.synch_data_running = False
+                Preferences.synch_data_running = False
                 return
 
             # log( 2, "" )
@@ -698,25 +696,25 @@ class BufferScroll(sublime_plugin.EventListener):
 
             id, index = self.view_id(view)
 
-            if Pref.get('synch_bookmarks', view):
+            if Preferences.get('synch_bookmarks', view):
                 bookmarks = []
-                for r in db[id]['b']:
+                for r in data_base[id]['b']:
                     bookmarks.append(sublime.Region(int(r[0]), int(r[1])))
 
-            if Pref.get('synch_marks', view):
+            if Preferences.get('synch_marks', view):
                 marks = []
-                for r in db[id]['m']:
+                for r in data_base[id]['m']:
                     marks.append(sublime.Region(int(r[0]), int(r[1])))
 
-            if Pref.get('synch_folds', view):
+            if Preferences.get('synch_folds', view):
                 folds = []
-                for r in db[id]['f']:
+                for r in data_base[id]['f']:
                     folds.append(sublime.Region(int(r[0]), int(r[1])))
 
             for _view in clones:
 
                 # bookmarks
-                if Pref.get('synch_bookmarks', _view):
+                if Preferences.get('synch_bookmarks', _view):
                     if bookmarks:
                         if bookmarks != _view.get_regions('bookmarks'):
                             _view.erase_regions("bookmarks")
@@ -729,7 +727,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         _view.erase_regions("bookmarks")
 
                 # marks
-                if Pref.get('synch_marks', _view):
+                if Preferences.get('synch_marks', _view):
                     if marks:
                         if marks != _view.get_regions('mark'):
                             _view.erase_regions("mark")
@@ -742,7 +740,7 @@ class BufferScroll(sublime_plugin.EventListener):
                         _view.erase_regions("mark")
 
                 # folds
-                if Pref.get('synch_folds', _view):
+                if Preferences.get('synch_folds', _view):
                     if folds:
                         if folds != _view.folded_regions():
                             # log( 2, 'synching folds' )
@@ -754,27 +752,27 @@ class BufferScroll(sublime_plugin.EventListener):
                     else:
                         _view.unfold(sublime.Region(0, _view.size()))
 
-        Pref.synch_data_running = False
+        Preferences.synch_data_running = False
 
     def synch_scroll(self):
 
-        Pref.synch_scroll_running = True
+        Preferences.synch_scroll_running = True
 
         # find current view
-        view = Pref.synch_scroll_current_view_object
-        if view is None or view.is_loading() or not Pref.get('synch_scroll', view):
-            Pref.synch_scroll_running = False
+        view = Preferences.synch_scroll_current_view_object
+        if view is None or view.is_loading() or not Preferences.get('synch_scroll', view):
+            Preferences.synch_scroll_running = False
             return
 
         # if something changed
-        if Pref.synch_scroll_last_view_id != Pref.current_view_id:
-            Pref.synch_scroll_last_view_id = Pref.current_view_id
-            Pref.synch_scroll_last_view_position = 0
+        if Preferences.synch_scroll_last_view_id != Preferences.current_view_id:
+            Preferences.synch_scroll_last_view_id = Preferences.current_view_id
+            Preferences.synch_scroll_last_view_position = 0
         last_view_position = str([view.visible_region(), view.viewport_position(), view.viewport_extent()])
-        if Pref.synch_scroll_last_view_position == last_view_position:
-            Pref.synch_scroll_running = False
+        if Preferences.synch_scroll_last_view_position == last_view_position:
+            Preferences.synch_scroll_running = False
             return
-        Pref.synch_scroll_last_view_position = last_view_position
+        Preferences.synch_scroll_last_view_position = last_view_position
 
         # if there is clones
         clones = {}
@@ -786,7 +784,7 @@ class BufferScroll(sublime_plugin.EventListener):
                     clones[index] = _view
                     clones_positions.append(index)
         if not clones_positions:
-            Pref.synch_scroll_running = False
+            Preferences.synch_scroll_running = False
             return
 
         # log( 2, "" )
@@ -815,7 +813,7 @@ class BufferScroll(sublime_plugin.EventListener):
             left, old_top = current_view.viewport_position()
             top = ((ppt-cph)+line)
             if abs(old_top-top) >= line:
-                current_view.set_viewport_position((left, top), Pref.use_animations)
+                current_view.set_viewport_position((left, top), Preferences.use_animations)
             previous_view = current_view
             b -= 1
 
@@ -828,11 +826,11 @@ class BufferScroll(sublime_plugin.EventListener):
             left, old_top = current_view.viewport_position()
             top = top[1]-3 # 3 is the approximated height of the shadow of the tabbar. Removing the shadow Makes the text more readable
             if abs(old_top-top) >= line:
-                current_view.set_viewport_position((left, top), Pref.use_animations)
+                current_view.set_viewport_position((left, top), Preferences.use_animations)
             previous_view = current_view
             i += 1
 
-        Pref.synch_scroll_running = False
+        Preferences.synch_scroll_running = False
 
 class BufferScrollForget(sublime_plugin.ApplicationCommand):
     def run(self, what):
@@ -844,25 +842,25 @@ class BufferScrollReFold(sublime_plugin.WindowCommand):
         view = sublime.active_window().active_view()
         if view is not None:
             id, index = BufferScrollAPI.view_id(view)
-            if id in db:
-                if 'pf' in db[id]:
+            if id in data_base:
+                if 'pf' in data_base[id]:
                     rs = []
-                    for r in db[id]['pf']:
+                    for r in data_base[id]['pf']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
                     if len(rs):
                         view.fold(rs)
 
                     # update the minimap
                     position = view.viewport_position()
-                    view.set_viewport_position((position[0]-1,position[1]-1), Pref.use_animations)
-                    view.set_viewport_position(position, Pref.use_animations)
+                    view.set_viewport_position((position[0]-1,position[1]-1), Preferences.use_animations)
+                    view.set_viewport_position(position, Preferences.use_animations)
 
     def is_enabled(self):
         view = sublime.active_window().active_view()
         if view is not None and view.file_name():
             id, index = BufferScrollAPI.view_id(view)
-            if id in db:
-                if 'pf' in db[id] and len(db[id]['pf']):
+            if id in data_base:
+                if 'pf' in data_base[id] and len(data_base[id]['pf']):
                     return True
         return False
 
@@ -894,15 +892,15 @@ class BufferScrollFoldSelectUnfolded(sublime_plugin.WindowCommand):
 def synch_scroll_loop():
     synch_scroll = BufferScrollAPI.synch_scroll
     while True:
-        if not Pref.synch_scroll_running:
-            Pref.synch_scroll_running = True
+        if not Preferences.synch_scroll_running:
+            Preferences.synch_scroll_running = True
             sublime.set_timeout(lambda:synch_scroll(), 0)
         time.sleep(0.08)
 
 def synch_data_loop():
     synch_data = BufferScrollAPI.synch_data
     while True:
-        if not Pref.synch_data_running:
+        if not Preferences.synch_data_running:
             sublime.set_timeout(lambda:synch_data(None, 'thread'), 0)
         time.sleep(0.5)
 
