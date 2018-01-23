@@ -236,7 +236,7 @@ class BufferScroll(sublime_plugin.EventListener):
         """
         selection = view.sel()
 
-        if selection:
+        if len( selection ):
             # log( 1, "selection[0]: %s", selection[0] )
             return selection[0].end() < 1
 
