@@ -117,21 +117,6 @@ def is_cloned_view( target_view ):
     return target_buffer_id in views_buffers_ids
 
 
-class SampleListener(sublime_plugin.EventListener):
-    """
-        https://github.com/evandrocoan/SublimeTextStudio/issues/26#issuecomment-262328180
-    """
-
-    def on_window_command(self, window, command, args):
-
-        # log( 1, "About to execute " + command )
-
-        if command == "clone_file":
-
-            global g_isToAllowSelectOperationOnTheClonedView
-            g_isToAllowSelectOperationOnTheClonedView = True
-
-
 class Preferences():
     def load(self):
         global debug
@@ -250,6 +235,17 @@ class BufferScroll(sublime_plugin.EventListener):
             return selection[0].end() < 1
 
         return True
+
+    def on_window_command(self, window, command, args):
+        """
+            Finish the package: Fix Project Switch-Restart Bug
+            https://github.com/evandrocoan/SublimeTextStudio/issues/26#issuecomment-262328180
+        """
+        # log( 1, "About to execute " + command )
+
+        if command == "clone_file":
+            global g_isToAllowSelectOperationOnTheClonedView
+            g_isToAllowSelectOperationOnTheClonedView = True
 
     # ST BUG tps://github.com/SublimeTextIssues/Core/issues/9
     def on_reload_async(self, view):
