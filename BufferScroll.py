@@ -38,32 +38,37 @@ log = getLogger( 127, os.path.basename( __file__ ) )
 # log( 1, "..." )
 
 # import inspect
-database = {}
-Preferences = {}
-BufferScrollAPI = {}
+database = ""
+Preferences = None
+BufferScrollAPI = None
+
 data_base = OrderedDict()
-g_settings = {}
+g_settings = None
 already_restored = {}
 scroll_already_restored = {}
+
 last_focused_view_name = ''
 disable_scroll_restoring = False
-
 g_isToAllowSelectOperationOnTheClonedView = False
+
 
 def plugin_loaded():
     global database, Preferences, BufferScrollAPI, data_base, g_settings
 
     # open
-    data_base = OrderedDict()
     database = dirname(sublime.packages_path())+'/Settings/BufferScroll.bin.gz'
+
     try:
         makedirs(dirname(database))
+
     except:
         pass
+
     try:
         gz = GzipFile(database, 'rb')
         data_base = load(gz);
         gz.close()
+
         if not isinstance(data_base, OrderedDict):
             data_base = OrderedDict(data_base)
     except:
@@ -98,17 +103,14 @@ def plugin_unloaded():
 
 
 def is_cloned_view( target_view ):
-
     views             = sublime.active_window().views()
     target_buffer_id  = target_view.buffer_id()
     views_buffers_ids = []
 
     for view in views:
-
         views_buffers_ids.append( view.buffer_id() )
 
     if target_buffer_id in views_buffers_ids:
-
         views_buffers_ids.remove( target_buffer_id )
 
     # log( 1, "( fix_project_switch_restart_bug.py ) Is a cloned view: {0}".format( target_view.buffer_id() in views_buffers_ids ) )
@@ -155,11 +157,14 @@ class Preferences():
 
         if syntax and hasattr(Preferences, syntax) and type in getattr(Preferences, syntax):
             return getattr(Preferences, syntax)[type];
+
         elif syntax and hasattr(Preferences, syntax) and type not in getattr(Preferences, syntax):
             return getattr(Preferences, type)
+
         elif syntax and g_settings.has(syntax):
             setattr(Preferences, syntax, g_settings.get(syntax))
             self.get(type, view);
+
         else:
             return getattr(Preferences, type)
 
@@ -171,6 +176,7 @@ class BufferScrollSaveThread(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
+
         if not Preferences.writing_to_disk:
             Preferences.writing_to_disk = True
 
@@ -184,12 +190,16 @@ class BufferScrollSaveThread(threading.Thread):
             gz = GzipFile(database+'.tmp', 'wb')
             dump(data_base, gz, -1)
             gz.close()
+
             try:
                 remove(database)
+
             except:
                 pass
+
             try:
                 rename(database+'.tmp', database)
+
             except:
                 pass
 
@@ -262,19 +272,21 @@ class BufferScroll(sublime_plugin.EventListener):
         # ST BUG https://github.com/SublimeTextIssues/Core/issues/181
         # the application is not sending "on_close" event when closings
         # or switching the projects, then we need to save the data on focus lost
-
         window = view.window();
+
         if not window:
             window = sublime.active_window()
+
         index = window.get_view_index(view)
+
         if index != (-1, -1): # if the view was not closed
             self.save(view, 'on_deactivated')
             self.synch_data(view)
 
-
-    # track the current_view. See next event listener
     def on_activated_async(self, view):
-
+        """
+            Track the current_view. See next event listener.
+        """
         # global already_restored
         # window = view.window();
 
@@ -294,28 +306,34 @@ class BufferScroll(sublime_plugin.EventListener):
         # if view_id not in scroll_already_restored:
         #     self.restore_scrolling(view)
 
-
-    # save the data when background tabs are closed
-    # these that don't receive "on_deactivated"
-    # on_pre_close does not have a "get_view_index" ?
     def on_pre_close(self, view):
+        """
+            Save the data when background tabs are closed
+            these that don't receive "on_deactivated"
+            on_pre_close does not have a "get_view_index" ?
+        """
         self.save(view, 'on_pre_close')
 
-    # save data for focused tab when saving
     def on_pre_save(self, view):
+        """
+            Save data for focused tab when saving.
+        """
         self.save(view, 'on_pre_save')
 
     def on_post_text_command(self, view, command_name, args):
+        """
+            Typewriter_scrolling
+        """
 
-        # typewriter_scrolling
         if (command_name == 'move' or  command_name == 'move_to') \
                 and Preferences.get('typewriter_scrolling_follow_cursor_movement', view):
 
             BufferScrollAPI.on_modified(view)
 
-    # typewriter scrolling
     def on_modified(self, view):
         """
+        Typewriter scrolling.
+
         There is a error which could pop some times directly to this line.
 
         Traceback (most recent call last):
@@ -329,6 +347,7 @@ class BufferScroll(sublime_plugin.EventListener):
 
         Issue: https://github.com/evandrocoan/SublimeTextStudio/issues/49
         """
+
         # TODO STBUG if the view is in a column, for some reason the parameter view, is not correct. This fix it
         if not view.settings().get('is_widget') \
                 and not view.is_scratch() \
@@ -345,23 +364,29 @@ class BufferScroll(sublime_plugin.EventListener):
             # log( 2, 'TYPEWRITER_SCROLLING' )
             line, col = view.rowcol(view.sel()[0].b)
             line = line-Preferences.typewriter_scrolling_shift
+
             if line < 1:
                 line = 0
+
             point = view.text_point(line, col)
             position_prev = view.viewport_position() # save the horizontal scroll
+
             view.show_at_center(point)
             position_next = view.viewport_position() # restore the horizontal scroll
             view.set_viewport_position((position_prev[0], position_next[1]))
 
-    # saving
     def save(self, view, where = 'unknow'):
+        """
+            saving
+        """
+
         if view is None or not view.file_name() or view.settings().get('is_widget'):
             return
 
         if view.is_loading():
             sublime.set_timeout(lambda: self.save(view, where), 100)
-        else:
 
+        else:
             id, index = self.view_id(view)
 
             # log( 2, "" )
@@ -387,6 +412,7 @@ class BufferScroll(sublime_plugin.EventListener):
             # scroll
             if 'l' not in data_base[id]:
                 data_base[id]['l'] = {}
+
             # save the scroll with "index" as the id ( for cloned views )
             data_base[id]['l'][index] = list(view.viewport_position())
             # also save as default if no exists
@@ -427,9 +453,12 @@ class BufferScroll(sublime_plugin.EventListener):
             # settings list
             settings = Preferences.get('remember_settings_list', view)
             data_base[id]['p'] = []
+
             for item in settings:
+
                 if item:
                     value = view.settings().get(item, 'waaaaaa')
+
                     if value != 'waaaaaa':
                         data_base[id]['p'].append({'k':item, 'v':value})
 
@@ -439,19 +468,22 @@ class BufferScroll(sublime_plugin.EventListener):
                 BufferScrollSaveThread().start()
 
     def view_id(self, view):
+
         if not view.settings().has('buffer_scroll_name'):
             view.settings().set('buffer_scroll_name', sha1(normpath(str(view.file_name()).encode('utf-8'))).hexdigest()[:8])
+
         return (view.settings().get('buffer_scroll_name'), self.view_index(view))
 
     def view_index(self, view):
         window = view.window();
+
         if not window:
             window = sublime.active_window()
+
         index = window.get_view_index(view)
         return str(window.id())+str(index)
 
     def restore_scrolling(self, view, where = 'unknow'):
-
         global scroll_already_restored
         global disable_scroll_restoring
 
@@ -469,6 +501,7 @@ class BufferScroll(sublime_plugin.EventListener):
 
         if view.is_loading():
             sublime.set_timeout(lambda: self.restore_scrolling(view, where), 100)
+
         else:
             scroll_already_restored[view.id()] = True
 
@@ -488,14 +521,17 @@ class BufferScroll(sublime_plugin.EventListener):
                 # log( 2, 'position: '+index )
 
                 if id in data_base and Preferences.get('restore_scroll', view):
+
                     # log( 2, 'DOING...' )
                     # scroll
                     if Preferences.get('i_use_cloned_views', view) and index in data_base[id]['l']:
                         position = tuple(data_base[id]['l'][index])
                         view.set_viewport_position(position, Preferences.use_animations)
+
                     else:
                         position = tuple(data_base[id]['l']['0'])
                         view.set_viewport_position(position, Preferences.use_animations)
+
                     # ugly hack
                     # ugly hack
                     # ugly hack
@@ -535,7 +571,6 @@ class BufferScroll(sublime_plugin.EventListener):
 
             g_isToAllowSelectOperationOnTheClonedView = False
 
-
     def restore( self, view, where = 'unknow', isOnActaved = False ):
         global already_restored
         global disable_scroll_restoring
@@ -548,6 +583,7 @@ class BufferScroll(sublime_plugin.EventListener):
                 or not view.file_name() \
                 or view.settings().get('is_widget') \
                 or view.id() in already_restored:
+
             return
 
         if view.is_loading():
@@ -567,16 +603,16 @@ class BufferScroll(sublime_plugin.EventListener):
 
             if id in data_base:
                 # log( 2, 'DOING...' )
-
                 isClonedView = False
 
                 # if the view changed outside of the application, don't restore folds etc
                 if data_base[id]['id'] == int(view.size()):
-
                     # fold
                     rs = []
+
                     for r in data_base[id]['f']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
+
                     if len(rs):
                         view.fold(rs)
                         # log( 2, "fold: "+str(rs)) ;
@@ -593,16 +629,20 @@ class BufferScroll(sublime_plugin.EventListener):
 
                     # marks
                     rs = []
+
                     for r in data_base[id]['m']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
+
                     if len(rs):
                         view.add_regions("mark", rs, "mark", "dot", sublime.HIDDEN | sublime.PERSISTENT)
                         # log( 2, 'marks: '+str(data_base[id]['m'])) ;
 
                     # bookmarks
                     rs = []
+
                     for r in data_base[id]['b']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
+
                     if len(rs):
                         view.add_regions("bookmarks", rs, "bookmarks", "bookmark", sublime.HIDDEN | sublime.PERSISTENT)
                         # log( 2, 'bookmarks: '+str(data_base[id]['b'])) ;
@@ -614,12 +654,16 @@ class BufferScroll(sublime_plugin.EventListener):
 
                 # syntax
                 if Preferences.get('remember_syntax', view) and 'x' in data_base[id] and view.settings().get('syntax') != data_base[id]['x'] and lexists(dirname(sublime.packages_path())+'/'+data_base[id]['x']):
+
                     view.settings().set('syntax', data_base[id]['x'])
                     # log( 2, 'syntax: '+str(data_base[id]['x'])) ;
 
                 if 'p' in data_base[id]:
+
                     for item in Preferences.get('remember_settings_list', view):
+
                         for i in data_base[id]['p']:
+
                             if 'k' in i and i['k'] == item:
                                 view.settings().set(i['k'], i['v'])
                                 break
@@ -660,91 +704,107 @@ class BufferScroll(sublime_plugin.EventListener):
         # if there is something to synch
         if not Preferences.get('synch_bookmarks', view) and not Preferences.get('synch_marks', view) and not Preferences.get('synch_folds', view):
             return
-        Preferences.synch_data_running = True
 
+        Preferences.synch_data_running = True
 
         if view.is_loading():
             Preferences.synch_data_running = False
             sublime.set_timeout(lambda: self.synch_data(view, where), 200)
-        else:
 
+        else:
             self.save(view, 'synch')
 
             # if there is clones
             clones = []
+
             for window in sublime.windows():
+
                 for _view in window.views():
+
                     if _view.buffer_id() == view.buffer_id() and view.id() != _view.id():
                         clones.append(_view)
+
             if not clones:
                 Preferences.synch_data_running = False
                 return
 
             # log( 2, "" )
             # log( 2, 'SYNCH_DATA()' )
-
             id, index = self.view_id(view)
 
             if Preferences.get('synch_bookmarks', view):
                 bookmarks = []
+
                 for r in data_base[id]['b']:
                     bookmarks.append(sublime.Region(int(r[0]), int(r[1])))
 
             if Preferences.get('synch_marks', view):
                 marks = []
+
                 for r in data_base[id]['m']:
                     marks.append(sublime.Region(int(r[0]), int(r[1])))
 
             if Preferences.get('synch_folds', view):
                 folds = []
+
                 for r in data_base[id]['f']:
                     folds.append(sublime.Region(int(r[0]), int(r[1])))
 
             for _view in clones:
-
                 # bookmarks
                 if Preferences.get('synch_bookmarks', _view):
+
                     if bookmarks:
+
                         if bookmarks != _view.get_regions('bookmarks'):
                             _view.erase_regions("bookmarks")
                             # log( 2, 'synching bookmarks' )
                             _view.add_regions("bookmarks", bookmarks, "bookmarks", "bookmark", sublime.HIDDEN | sublime.PERSISTENT)
+
                         else:
                             # log( 2, 'skipping synch of bookmarks these are equal' )
                             pass
+
                     else:
                         _view.erase_regions("bookmarks")
 
                 # marks
                 if Preferences.get('synch_marks', _view):
+
                     if marks:
+
                         if marks != _view.get_regions('mark'):
                             _view.erase_regions("mark")
                             # log( 2, 'synching marks' )
                             _view.add_regions("mark", marks, "mark", "dot", sublime.HIDDEN | sublime.PERSISTENT)
+
                         else:
                             # log( 2, 'skipping synch of marks these are equal' )
                             pass
+
                     else:
                         _view.erase_regions("mark")
 
                 # folds
                 if Preferences.get('synch_folds', _view):
+
                     if folds:
+
                         if folds != _view.folded_regions():
                             # log( 2, 'synching folds' )
                             _view.unfold(sublime.Region(0, _view.size()))
                             _view.fold(folds)
+
                         else:
                             # log( 2, 'skipping synch of folds these are equal' )
                             pass
+
                     else:
                         _view.unfold(sublime.Region(0, _view.size()))
 
         Preferences.synch_data_running = False
 
     def synch_scroll(self):
-
         Preferences.synch_scroll_running = True
 
         # find current view
@@ -757,21 +817,28 @@ class BufferScroll(sublime_plugin.EventListener):
         if Preferences.synch_scroll_last_view_id != Preferences.current_view_id:
             Preferences.synch_scroll_last_view_id = Preferences.current_view_id
             Preferences.synch_scroll_last_view_position = 0
+
         last_view_position = str([view.visible_region(), view.viewport_position(), view.viewport_extent()])
+
         if Preferences.synch_scroll_last_view_position == last_view_position:
             Preferences.synch_scroll_running = False
             return
+
         Preferences.synch_scroll_last_view_position = last_view_position
 
         # if there is clones
         clones = {}
         clones_positions = []
+
         for window in sublime.windows():
+
             for _view in window.views():
+
                 if not _view.is_loading() and _view.buffer_id() == view.buffer_id() and view.id() != _view.id():
                     id, index = self.view_id(_view)
                     clones[index] = _view
                     clones_positions.append(index)
+
         if not clones_positions:
             Preferences.synch_scroll_running = False
             return
@@ -792,15 +859,18 @@ class BufferScroll(sublime_plugin.EventListener):
 
         lenght = len(clones_positions)
         line     = view.line_height()
+
         # synch scroll for views to the left
         b = i-1
         previous_view = view
+
         while b > -1:
             current_view = clones[clones_positions[b]]
             ppl, ppt = current_view.text_to_layout(previous_view.line(previous_view.visible_region().a).b)
             cpw, cph = current_view.viewport_extent()
             left, old_top = current_view.viewport_position()
             top = ((ppt-cph)+line)
+
             if abs(old_top-top) >= line:
                 current_view.set_viewport_position((left, top), Preferences.use_animations)
             previous_view = current_view
@@ -809,33 +879,46 @@ class BufferScroll(sublime_plugin.EventListener):
         # synch scroll for views to the right
         i += 1
         previous_view = view
+
         while i < lenght:
             current_view = clones[clones_positions[i]]
             top = current_view.text_to_layout(previous_view.line(previous_view.visible_region().b).a)
             left, old_top = current_view.viewport_position()
-            top = top[1]-3 # 3 is the approximated height of the shadow of the tabbar. Removing the shadow Makes the text more readable
+
+            # 3 is the approximated height of the shadow of the tabbar. Removing the shadow Makes the text more readable
+            top = top[1]-3
+
             if abs(old_top-top) >= line:
                 current_view.set_viewport_position((left, top), Preferences.use_animations)
+
             previous_view = current_view
             i += 1
 
         Preferences.synch_scroll_running = False
 
 class BufferScrollForget(sublime_plugin.ApplicationCommand):
+
     def run(self, what):
+
         if what == 'color_scheme':
             sublime.active_window().active_view().settings().erase('color_scheme')
 
 class BufferScrollReFold(sublime_plugin.WindowCommand):
+
     def run(self):
         view = sublime.active_window().active_view()
+
         if view is not None:
             id, index = BufferScrollAPI.view_id(view)
+
             if id in data_base:
+
                 if 'pf' in data_base[id]:
                     rs = []
+
                     for r in data_base[id]['pf']:
                         rs.append(sublime.Region(int(r[0]), int(r[1])))
+
                     if len(rs):
                         view.fold(rs)
 
@@ -846,20 +929,28 @@ class BufferScrollReFold(sublime_plugin.WindowCommand):
 
     def is_enabled(self):
         view = sublime.active_window().active_view()
+
         if view is not None and view.file_name():
             id, index = BufferScrollAPI.view_id(view)
+
             if id in data_base:
+
                 if 'pf' in data_base[id] and len(data_base[id]['pf']):
                     return True
+
         return False
 
 class BufferScrollFoldSelectFolded(sublime_plugin.WindowCommand):
+
     def run(self):
         view = sublime.active_window().active_view()
+
         if view is not None:
             folds = [[item.a, item.b] for item in view.folded_regions()]
+
             if folds:
                 view.sel().clear()
+
                 for fold in folds:
                     view.sel().add(sublime.Region(int(fold[0]), int(fold[1])))
 
@@ -867,30 +958,41 @@ class BufferScrollFoldSelectUnfolded(sublime_plugin.WindowCommand):
     def run(self):
         view = sublime.active_window().active_view()
         folds = [[item.a, item.b] for item in view.folded_regions()]
+
         if folds:
             view.sel().clear()
             prev = 0
+
             for fold in folds:
                 view.sel().add(sublime.Region(prev, int(fold[0])))
+
                 if view.substr(fold[1]) == "\n":
                     prev = int(fold[1]) + 1
+
                 else:
                     prev = int(fold[1])
+
             view.sel().add(sublime.Region(prev, view.size()))
 
 def synch_scroll_loop():
     synch_scroll = BufferScrollAPI.synch_scroll
+
     while True:
+
         if not Preferences.synch_scroll_running:
             Preferences.synch_scroll_running = True
             sublime.set_timeout(lambda:synch_scroll(), 0)
+
         time.sleep(0.08)
 
 def synch_data_loop():
     synch_data = BufferScrollAPI.synch_data
+
     while True:
+
         if not Preferences.synch_data_running:
             sublime.set_timeout(lambda:synch_data(None, 'thread'), 0)
+
         time.sleep(0.5)
 
 def unlockTheScrollRestoring():
