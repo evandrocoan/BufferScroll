@@ -76,13 +76,6 @@ def plugin_loaded():
     Preferences = Preferences()
     Preferences.load()
 
-    version         = 7
-    version_current = g_settings.get('version')
-
-    if version_current != version:
-        g_settings.set('version', version)
-
-    sublime.save_settings('BufferScroll.sublime-settings')
     g_settings.clear_on_change('reload')
     g_settings.add_on_change('reload', lambda:Preferences.load())
 
@@ -100,6 +93,10 @@ def plugin_loaded():
 
         running_synch_scroll_loop = True
         thread.start_new_thread(synch_scroll_loop, ())
+
+
+def plugin_unloaded():
+    g_settings.clear_on_change('reload')
 
 
 def is_cloned_view( target_view ):
